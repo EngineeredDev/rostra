@@ -1,0 +1,8 @@
+!dist/
+!dist/**
+test/
+scripts/
+.github/
+coverage/
+node_modules/
+*.tsbuildinfo

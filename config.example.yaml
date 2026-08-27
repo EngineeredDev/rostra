@@ -1,0 +1,159 @@
+version: 2
+
+adapters:
+  claude:
+    kind: cli
+    command: claude
+    args: ["-p", "--model", "{model}", "{prompt}"]
+    family: anthropic
+  codex:
+    kind: cli
+    command: codex
+    args: ["exec", "--skip-git-repo-check", "--model", "{model}", "-c", "model_reasoning_effort=\"{reasoning_effort}\"", "{prompt}"]
+    family: openai
+  droid:
+    kind: cli
+    command: droid
+    args: ["exec", "-m", "{model}", "-r", "{reasoning_effort}", "{prompt}"]
+    family: factory
+  gemini:
+    kind: cli
+    command: gemini
+    args: ["--skip-trust", "-m", "{model}", "-p", "{prompt}"]
+    family: google
+  llamacpp:
+    kind: cli
+    command: llama-cli
+    args: ["-m", "{model}", "-p", "{prompt}", "-n", "2048", "-c", "4096"]
+    family: local
+  omp:
+    kind: cli
+    command: omp
+    args: ["-p", "--no-session", "--auto-approve", "--model", "{model}", "--thinking={reasoning_effort}", "{prompt}"]
+    timeout_seconds: 600
+    family: omp
+  ollama:
+    kind: http
+    enabled: false
+    base_url: http://127.0.0.1:11434
+    endpoint: /api/generate
+    family: local
+  lmstudio:
+    kind: http
+    enabled: false
+    base_url: http://127.0.0.1:1234
+    family: local
+  openrouter:
+    kind: http
+    enabled: false
+    base_url: https://openrouter.ai/api
+    endpoint: /api/v1/chat/completions
+    api_key_env: OPENROUTER_API_KEY
+    family: openrouter
+  nebius:
+    kind: http
+    enabled: false
+    base_url: https://api.studio.nebius.ai
+    api_key_env: NEBIUS_API_KEY
+    family: nebius
+  openai:
+    kind: http
+    enabled: false
+    base_url: https://api.openai.com
+    api_key_env: OPENAI_API_KEY
+    family: openai
+
+model_registry:
+  models:
+    - id: gpt-5.6-sol
+      adapter: codex
+      default: true
+      reasoning_efforts: [low, medium, high, xhigh]
+      capabilities: [analysis, code, evidence]
+      provider_family: openai
+      default_latency_ms: 30000
+    - id: opus
+      adapter: claude
+      default: true
+      reasoning_efforts: [low, medium, high]
+      capabilities: [analysis, code, evidence]
+      provider_family: anthropic
+      default_latency_ms: 30000
+    - id: openai-codex/gpt-5.6-sol
+      adapter: omp
+      default: true
+      reasoning_efforts: [low, medium, high]
+      capabilities: [analysis, code, evidence]
+      provider_family: openai
+      default_latency_ms: 30000
+
+defaults:
+  protocol: conference
+
+protocols:
+  quick:
+    stages:
+      - { id: analysis, kind: independent_analysis, visibility: question_only, minimum_completions: 2 }
+      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+  conference:
+    stages:
+      - { id: analysis, kind: independent_analysis, visibility: question_only, minimum_completions: 2 }
+      - { id: critique, kind: critique, minimum_completions: 2 }
+      - { id: revision, kind: revision, minimum_completions: 2 }
+      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+  red_team:
+    stages:
+      - { id: proposal, kind: proposal, visibility: question_only, minimum_completions: 2 }
+      - { id: attack, kind: adversarial_attack, minimum_completions: 2 }
+      - { id: defense, kind: defense, minimum_completions: 2 }
+      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+  delphi:
+    stages:
+      - { id: analysis, kind: independent_analysis, visibility: question_only, minimum_completions: 2 }
+      - { id: aggregate, kind: anonymous_aggregate }
+      - { id: revision, kind: revision, minimum_completions: 2 }
+      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+  premortem:
+    stages:
+      - { id: premortem, kind: premortem, visibility: question_only, minimum_completions: 2 }
+      - { id: revision, kind: revision, minimum_completions: 2 }
+      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+  evidence_tribunal:
+    stages:
+      - { id: proposal, kind: proposal, visibility: question_only, minimum_completions: 2 }
+      - { id: evidence, kind: evidence_collection, allowed_capabilities: [read_file, search_files, list_files, get_file_tree, git_status, git_diff] }
+      - { id: examination, kind: cross_examination, minimum_completions: 2 }
+      - { id: adjudication, kind: adjudication, minimum_completions: 2 }
+      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+
+similarity:
+  provider: local_minilm
+  agreement_threshold: 0.82
+  retrieval_threshold: 0.72
+  thresholds_revision: minilm-v1
+
+execution:
+  allow_host_tools: false
+  max_stdout_bytes: 1048576
+  max_stderr_bytes: 262144
+  termination_grace_ms: 5000
+  evidence_timeout_ms: 10000
+  evidence_max_bytes: 1048576
+  ignored_paths: [.git, node_modules, dist]
+
+jobs:
+  max_concurrency: 2
+  lease_ms: 30000
+  heartbeat_ms: 5000
+  poll_interval_ms: 100
+  dedupe_success_ms: 86400000
+  retention_ms: 2592000000
+  wait_min_seconds: 1
+  wait_max_seconds: 240
+
+storage:
+  busy_timeout_ms: 5000
+
+decision_graph:
+  default_review_days: 30
+  retrieval_limit: 20
