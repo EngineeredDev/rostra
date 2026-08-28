@@ -1,10 +1,10 @@
-import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
+import { McpServer, type CallToolResult, type ServerContext } from "@modelcontextprotocol/server";
 import type { Config } from "../config/schema.js";
 import { toolContracts } from "../contracts/tools.js";
 import type { DecisionRepository } from "../decisions/repository.js";
 import type { DecisionCiReviewer } from "../decision-ci/review.js";
 import { AppError, errorMessage } from "../errors.js";
-import type { JobSnapshot } from "../jobs/schema.js";
+import type { JobEvent, JobSnapshot } from "../jobs/schema.js";
 import { isTerminalStatus } from "../jobs/state-machine.js";
 import type { JobStore } from "../jobs/store.js";
 import { SystemProcessIdentityProvider } from "../process/identity.js";
@@ -61,19 +61,55 @@ function jobProjection(job: JobSnapshot, includeAttempts: boolean, store: JobSto
   };
 }
 
-async function waitForTerminal(
-  store: JobStore,
-  jobId: string,
-  timeoutSeconds: number,
-  pollIntervalMs: number,
-): Promise<JobSnapshot> {
-  const deadline = Date.now() + timeoutSeconds * 1_000;
-  let job = store.get(jobId);
-  while (!isTerminalStatus(job.status) && Date.now() < deadline) {
-    await new Promise<void>((resolve) => setTimeout(resolve, pollIntervalMs));
-    job = store.get(jobId);
+const PROGRESS_BATCH = 100;
+
+type ProgressEmitter = (event: JobEvent) => Promise<void>;
+
+/** Emits `notifications/progress` keyed by `job_events.seq`, or nothing when the client sent no token. */
+function progressEmitter(context: ServerContext): ProgressEmitter | undefined {
+  const progressToken = context.mcpReq._meta?.progressToken;
+  if (progressToken === undefined) {
+    return undefined;
   }
-  return job;
+  return async (event) => {
+    await context.mcpReq.notify({
+      method: "notifications/progress",
+      params: { progressToken, progress: event.seq, message: event.event_type },
+    });
+  };
+}
+
+interface PollOptions<T> {
+  timeoutSeconds: number;
+  pollIntervalMs: number;
+  afterSeq: number;
+  probe: () => T;
+  isDone: (value: T) => boolean;
+  emit: ProgressEmitter | undefined;
+}
+
+/** Shared wait loop for both blocking tools: poll, report each newly appended event, return the last probe. */
+async function pollJob<T>(store: JobStore, jobId: string, options: PollOptions<T>): Promise<T> {
+  const deadline = Date.now() + options.timeoutSeconds * 1_000;
+  const emit = options.emit;
+  let seq = options.afterSeq;
+  let value = options.probe();
+  const report = async (): Promise<void> => {
+    if (emit === undefined) {
+      return;
+    }
+    for (const event of store.events(jobId, seq, PROGRESS_BATCH)) {
+      seq = event.seq;
+      await emit(event);
+    }
+  };
+  await report();
+  while (!options.isDone(value) && Date.now() < deadline) {
+    await new Promise<void>((resolve) => setTimeout(resolve, options.pollIntervalMs));
+    value = options.probe();
+    await report();
+  }
+  return value;
 }
 
 export function createMcpServer(runtime: McpRuntime): McpServer {
@@ -151,7 +187,7 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
       inputSchema: toolContracts.get_deliberation.input,
       outputSchema: toolContracts.get_deliberation.output,
     },
-    async (input) => {
+    async (input, context) => {
       let jobId: string | undefined = input.job_id;
       try {
         let job = input.job_id === undefined
@@ -160,19 +196,22 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
         if (job === undefined) {
           throw new AppError("job_not_found", "No job matched the selector");
         }
-        jobId = job.job_id;
+        const id = job.job_id;
+        jobId = id;
         if (input.wait_for_terminal && !isTerminalStatus(job.status)) {
           const requested = input.wait_timeout_seconds ?? runtime.config.jobs.wait_max_seconds;
           const timeout = Math.max(
             runtime.config.jobs.wait_min_seconds,
             Math.min(requested, runtime.config.jobs.wait_max_seconds),
           );
-          job = await waitForTerminal(
-            runtime.store,
-            job.job_id,
-            timeout,
-            runtime.config.jobs.poll_interval_ms,
-          );
+          job = await pollJob(runtime.store, id, {
+            timeoutSeconds: timeout,
+            pollIntervalMs: runtime.config.jobs.poll_interval_ms,
+            afterSeq: 0,
+            probe: () => runtime.store.get(id),
+            isDone: (candidate) => isTerminalStatus(candidate.status),
+            emit: progressEmitter(context),
+          });
         }
         return response(jobProjection(job, input.include_attempts, runtime.store));
       } catch (error) {
@@ -188,21 +227,21 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
       inputSchema: toolContracts.tail_deliberation.input,
       outputSchema: toolContracts.tail_deliberation.output,
     },
-    async (input) => {
+    async (input, context) => {
       try {
-        let events = runtime.store.events(input.job_id, input.after_seq, input.limit);
         const requested = input.wait_timeout_seconds ?? runtime.config.jobs.wait_max_seconds;
         const timeout = Math.max(
           runtime.config.jobs.wait_min_seconds,
           Math.min(requested, runtime.config.jobs.wait_max_seconds),
         );
-        const deadline = Date.now() + timeout * 1_000;
-        while (input.wait_for_change && events.length === 0 && Date.now() < deadline) {
-          await new Promise<void>((resolve) =>
-            setTimeout(resolve, runtime.config.jobs.poll_interval_ms),
-          );
-          events = runtime.store.events(input.job_id, input.after_seq, input.limit);
-        }
+        const events = await pollJob(runtime.store, input.job_id, {
+          timeoutSeconds: timeout,
+          pollIntervalMs: runtime.config.jobs.poll_interval_ms,
+          afterSeq: input.after_seq,
+          probe: () => runtime.store.events(input.job_id, input.after_seq, input.limit),
+          isDone: (batch) => !input.wait_for_change || batch.length > 0,
+          emit: input.wait_for_change ? progressEmitter(context) : undefined,
+        });
         return response({
           job_id: input.job_id,
           events,
