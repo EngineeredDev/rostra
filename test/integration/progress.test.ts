@@ -57,6 +57,7 @@ async function harness(): Promise<{ client: Client; store: JobStore }> {
     store,
     decisions: new DecisionRepository(db),
     reviewer: new DecisionCiReviewer(db),
+    sessionModels: new Map<string, string>(),
     ensureSupervisor: () => Promise.resolve(),
   });
   const client = new Client({ name: "progress-integration", version: "1" });

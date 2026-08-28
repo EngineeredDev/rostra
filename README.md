@@ -59,7 +59,37 @@ Use an absolute repository path in the client configuration:
 }
 ```
 
-The server uses stdio transport. It writes protocol messages only to standard output.
+The server uses stdio transport by default. It writes protocol messages only to standard output.
+
+### HTTP transport
+
+`ai-counsel serve --http` serves the same tool surface over Streamable HTTP at `/mcp`:
+
+```bash
+node dist/cli/main.js serve --http --port 8787
+```
+
+Point a client at `http://127.0.0.1:8787/mcp`. One HTTP process serves every client, so the
+embedding model is loaded once instead of once per stdio client.
+
+The endpoint has no authentication. It binds `127.0.0.1` and rejects any request whose `Host`
+or `Origin` header is not loopback. Do not expose it to a network you do not control. Configure
+the bind address, port, subscription cap, and keep-alive interval under `http:` in `config.yaml`;
+`--host` and `--port` override them.
+
+`--host 0.0.0.0` prints a warning and is only meant for containers, where the loopback bind is
+unreachable through `-p`. Publish it on the host's loopback address:
+
+```bash
+docker run -p 127.0.0.1:8787:8787 ai-counsel serve --http --host 0.0.0.0
+```
+
+`ai-counsel serve --stdio` is the explicit form of the default; bare `ai-counsel` still means
+stdio.
+
+Both transports keep the build identity captured at startup. Rebuilding or editing the
+configuration underneath a running server makes the next dispatch fail with
+`stale_server_build`; restart the server.
 
 ## Durable deliberation
 
@@ -131,7 +161,8 @@ Decision CI reports stale evidence, changed assumptions, conflicting decisions, 
 ## Model and quality tools
 
 - `list_models` lists enabled configured models.
-- `set_session_models` changes process-local adapter defaults.
+- `set_session_models` changes adapter defaults for the whole server process. Over HTTP one
+  process serves every client, so these overrides are shared rather than per-client.
 - `get_quality_metrics` returns attempts, ballots, failures, latency, cost, and prediction calibration.
 
 Adaptive routing uses Laplace-smoothed success rates and Brier calibration. It also enforces provider-family, cost, and latency constraints.
@@ -159,6 +190,19 @@ docker run --rm -i \
   -v ai-counsel-data:/home/node/.local/share/ai-counsel \
   ai-counsel
 ```
+
+Run the HTTP transport instead, published on the host's loopback address:
+
+```bash
+docker run --rm -p 127.0.0.1:8787:8787 \
+  -e AI_COUNSEL_CONFIG=/config/config.yaml \
+  -v "$PWD/config.yaml:/config/config.yaml:ro" \
+  -v ai-counsel-data:/home/node/.local/share/ai-counsel \
+  ai-counsel serve --http --host 0.0.0.0
+```
+
+The container must bind `0.0.0.0` to be reachable through `-p`, which is why the published port
+is pinned to `127.0.0.1`. The endpoint is unauthenticated.
 
 The image includes Git. It does not include third-party model CLIs.
 

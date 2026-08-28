@@ -11,11 +11,18 @@ import { SystemProcessIdentityProvider } from "../process/identity.js";
 import { PACKAGE_VERSION } from "../version.js";
 import { parseJsonValue, type JsonValue } from "../utils/canonical-json.js";
 
-interface McpRuntime {
+export interface McpRuntime {
   config: Config;
   store: JobStore;
   decisions: DecisionRepository;
   reviewer: DecisionCiReviewer;
+  /**
+   * Adapter model overrides. Held on the runtime, not in `createMcpServer`, because the HTTP
+   * entry runs the server factory once per inbound message: a factory-local map would be
+   * discarded before the next tools/call. Process-scoped, so every client of one HTTP endpoint
+   * shares it.
+   */
+  sessionModels: Map<string, string>;
   ensureSupervisor: () => Promise<void>;
 }
 
@@ -114,7 +121,7 @@ async function pollJob<T>(store: JobStore, jobId: string, options: PollOptions<T
 
 export function createMcpServer(runtime: McpRuntime): McpServer {
   const server = new McpServer({ name: "ai-counsel", version: PACKAGE_VERSION });
-  const sessionModels = new Map<string, string>();
+  const sessionModels = runtime.sessionModels;
 
   server.registerTool(
     "start_deliberation",
@@ -335,7 +342,9 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
   server.registerTool(
     "set_session_models",
     {
-      description: "Set process-local default models by adapter",
+      description:
+        "Set default models by adapter for this server process. The overrides are process-scoped, "
+        + "so every client connected to the same HTTP endpoint shares them.",
       inputSchema: toolContracts.set_session_models.input,
       outputSchema: toolContracts.set_session_models.output,
     },

@@ -118,6 +118,7 @@ describe("local Decision CI", () => {
       store: new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 1_000 }),
       decisions: new DecisionRepository(db),
       reviewer,
+      sessionModels: new Map<string, string>(),
       ensureSupervisor: () => Promise.resolve(),
     });
     const mcpClient = new Client({ name: "decision-ci-test", version: "1" });

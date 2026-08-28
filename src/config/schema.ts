@@ -129,6 +129,12 @@ export const configSchema = z.strictObject({
   storage: z.strictObject({
     busy_timeout_ms: positiveInt.default(5_000),
   }),
+  http: z.strictObject({
+    host: nonempty.default("127.0.0.1"),
+    port: z.number().int().min(1).max(65_535).default(8787),
+    max_subscriptions: positiveInt.default(1_024),
+    keep_alive_ms: z.number().int().min(0).default(15_000),
+  }).prefault({}),
   decision_graph: z.strictObject({
     default_review_days: positiveInt.default(30),
     retrieval_limit: z.number().int().min(1).max(100).default(20),

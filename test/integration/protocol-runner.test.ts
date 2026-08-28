@@ -93,6 +93,7 @@ describe("configured protocol runner", () => {
       store,
       decisions: new DecisionRepository(db),
       reviewer: new DecisionCiReviewer(db),
+      sessionModels: new Map<string, string>(),
       ensureSupervisor: () => Promise.resolve(),
     });
     const mcpClient = new Client({ name: "runner-integration", version: "1" });

@@ -154,6 +154,12 @@ jobs:
 storage:
   busy_timeout_ms: 5000
 
+http:
+  host: 127.0.0.1
+  port: 8787
+  max_subscriptions: 1024
+  keep_alive_ms: 15000
+
 decision_graph:
   default_review_days: 30
   retrieval_limit: 20

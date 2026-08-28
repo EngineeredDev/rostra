@@ -18,4 +18,5 @@ COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 USER node
 ENV AI_COUNSEL_DATA_HOME=/home/node/.local/share/ai-counsel
+EXPOSE 8787
 ENTRYPOINT ["node", "dist/cli/main.js"]
