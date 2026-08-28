@@ -9,6 +9,8 @@ import {
   type McpHandlerRequestOptions,
 } from "@modelcontextprotocol/server";
 import { errorMessage } from "../errors.js";
+import { JobEventWatcher } from "../jobs/event-watcher.js";
+import { deliberationUris } from "./projection.js";
 import { createRuntime } from "./runtime.js";
 import { createMcpServer } from "./server.js";
 
@@ -83,6 +85,17 @@ export async function runHttpServer(options: HttpServerOptions = {}): Promise<Ht
     return handler.fetch(request, requestOptions);
   };
 
+  // createMcpHandler builds a fresh McpServer per request, so there is no long-lived instance to
+  // push on: updates go through the handler's event bus, which the listen router filters.
+  const watcher = new JobEventWatcher({
+    store,
+    notifier: { resourceUpdated: (uri) => handler.notify.resourceUpdated(uri) },
+    intervalMs: config.jobs.poll_interval_ms,
+    urisForJob: deliberationUris,
+    onerror: reportError,
+  });
+  watcher.start();
+
   const nodeHandler = toNodeHandler({ fetch: fetchHandler }, { onerror: reportError });
   const server = createServer((request, response) => {
     // The adapter declares `method` optional; Node types it `string | undefined`, which
@@ -103,6 +116,7 @@ export async function runHttpServer(options: HttpServerOptions = {}): Promise<Ht
     port: boundPort,
     url: `http://${host.includes(":") ? `[${host}]` : host}:${boundPort}${MCP_PATH}`,
     close: async (): Promise<void> => {
+      watcher.stop();
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
         server.closeAllConnections();

@@ -127,8 +127,13 @@ decision_graph: {}
   return { endpoint, dataHome };
 }
 
-async function connect(endpoint: string): Promise<Client> {
-  const client = new Client({ name: "ai-counsel-http-e2e", version: "1" });
+async function connect(endpoint: string, modern = false): Promise<Client> {
+  const client = new Client(
+    { name: "ai-counsel-http-e2e", version: "1" },
+    // subscriptions/listen exists only on the 2026-07-28 era; the default is the 2025 handshake,
+    // which the other cases keep exercising because the endpoint still serves it.
+    modern ? { versionNegotiation: { mode: "auto" } } : {},
+  );
   await client.connect(new StreamableHTTPClientTransport(new URL(endpoint)));
   return client;
 }
@@ -184,6 +189,59 @@ describe("compiled MCP over Streamable HTTP", () => {
     expect(listed).toMatchObject({ session_models: {} });
 
     await client.close();
+  });
+
+  it("delivers resources/updated only to the subscribed URI", async () => {
+    const { endpoint, dataHome } = await serve();
+    const subscriber = await connect(endpoint, true);
+    const bystander = await connect(endpoint, true);
+
+    const started = objectSchema.parse((await subscriber.callTool({
+      name: "start_deliberation",
+      arguments: {
+        question: "subscribed fake job",
+        working_directory: process.cwd(),
+        protocol: "quick",
+        committee: { mode: "explicit" },
+        participants,
+      },
+    })).structuredContent);
+    const jobId = z.uuid().parse(started.job_id);
+    const jobUri = `counsel://deliberations/${jobId}`;
+
+    const observed: string[] = [];
+    const ignored: string[] = [];
+    subscriber.setNotificationHandler("notifications/resources/updated", (notification) => {
+      observed.push(notification.params.uri);
+    });
+    bystander.setNotificationHandler("notifications/resources/updated", (notification) => {
+      ignored.push(notification.params.uri);
+    });
+    const subscription = await subscriber.listen({ resourceSubscriptions: [jobUri] });
+    const unrelated = await bystander.listen({
+      resourceSubscriptions: ["counsel://deliberations/00000000-0000-4000-8000-000000000000"],
+    });
+
+    const terminal = objectSchema.parse((await subscriber.callTool({
+      name: "get_deliberation",
+      arguments: { job_id: jobId, wait_for_terminal: true, wait_timeout_seconds: 10 },
+    })).structuredContent);
+    expect(terminal).toMatchObject({ job_id: jobId, status: "succeeded" });
+    await new Promise<void>((resolvePromise) => setTimeout(resolvePromise, 200));
+
+    expect(observed).toContain(jobUri);
+    expect(observed).not.toContain(`${jobUri}/events`);
+    expect(ignored).toEqual([]);
+
+    await subscription.close();
+    await unrelated.close();
+    await subscriber.close();
+    await bystander.close();
+
+    const db = new Database(join(dataHome, "ai-counsel.sqlite"), { readonly: true, fileMustExist: true });
+    const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
+    db.close();
+    if (state !== undefined) supervisors.add(state.pid);
   });
 
   it("rejects non-loopback origins, non-POST methods, and unknown paths", async () => {

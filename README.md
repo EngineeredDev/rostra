@@ -120,6 +120,23 @@ Use these tools to manage jobs:
 
 A recovered job can enter `recovery_required` after an uncertain external attempt. Call `resume_deliberation` with `retry` or `cancel` to resolve it.
 
+### Deliberations as resources
+
+Every job is also readable as a resource, with no polling:
+
+- `counsel://deliberations/{job_id}` returns what `get_deliberation` returns.
+- `counsel://deliberations/{job_id}/events` returns what `tail_deliberation` returns.
+
+Both are URI templates, so they appear under `resources/templates/list` rather than
+`resources/list`. The server advertises `resources.subscribe`, and a client on the 2026-07-28
+protocol can subscribe to a job's URIs and receive `notifications/resources/updated` as the job
+moves. Job transitions happen in detached worker processes, so the server discovers them by
+polling the database every `jobs.poll_interval_ms`; a subscriber sees a change one interval late.
+
+Blocking calls also report progress. When `get_deliberation(wait_for_terminal)` or
+`tail_deliberation(wait_for_change)` is called with a progress token, each newly recorded job
+event is sent as `notifications/progress`, keyed by the event sequence number.
+
 ## Decisions and outcomes
 
 Each completed job publishes an immutable decision packet. The packet includes claims, evidence provenance, predictions, ballots, minority reports, and experiment proposals.

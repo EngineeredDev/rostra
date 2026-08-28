@@ -4,12 +4,14 @@ import { toolContracts } from "../contracts/tools.js";
 import type { DecisionRepository } from "../decisions/repository.js";
 import type { DecisionCiReviewer } from "../decision-ci/review.js";
 import { AppError, errorMessage } from "../errors.js";
-import type { JobEvent, JobSnapshot } from "../jobs/schema.js";
+import type { JobEvent } from "../jobs/schema.js";
 import { isTerminalStatus } from "../jobs/state-machine.js";
 import type { JobStore } from "../jobs/store.js";
 import { SystemProcessIdentityProvider } from "../process/identity.js";
 import { PACKAGE_VERSION } from "../version.js";
-import { parseJsonValue, type JsonValue } from "../utils/canonical-json.js";
+import { parseJsonValue } from "../utils/canonical-json.js";
+import { jobProjection, type JsonObject } from "./projection.js";
+import { registerDeliberationResources } from "./resources.js";
 
 export interface McpRuntime {
   config: Config;
@@ -26,8 +28,6 @@ export interface McpRuntime {
   ensureSupervisor: () => Promise<void>;
 }
 
-type JsonObject = Record<string, JsonValue>;
-
 function response(payload: JsonObject): CallToolResult {
   return {
     content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
@@ -43,29 +43,6 @@ function failure(error: unknown, jobId?: string): CallToolResult {
     ...(jobId === undefined ? {} : { job_id: jobId }),
   };
   return response(payload);
-}
-
-function jobProjection(job: JobSnapshot, includeAttempts: boolean, store: JobStore): JsonObject {
-  return {
-    job_id: job.job_id,
-    status: job.status,
-    question: job.question,
-    created_at_ms: job.created_at_ms,
-    updated_at_ms: job.updated_at_ms,
-    row_version: job.row_version,
-    execution_isolation: job.execution_isolation,
-    ...(job.result_status === undefined ? {} : { result_status: job.result_status }),
-    ...(job.result_json === undefined ? {} : { result: job.result_json }),
-    ...(job.decision_id === undefined ? {} : { decision_id: job.decision_id }),
-    ...(job.transcript_path === undefined ? {} : { transcript_path: job.transcript_path }),
-    ...(job.cancellation_reason === undefined
-      ? {}
-      : { cancellation_reason: job.cancellation_reason }),
-    ...(job.recovery_reason === undefined ? {} : { recovery_reason: job.recovery_reason }),
-    ...(includeAttempts
-      ? { attempts: parseJsonValue(JSON.parse(JSON.stringify(store.attempts(job.job_id)))) }
-      : {}),
-  };
 }
 
 const PROGRESS_BATCH = 100;
@@ -120,8 +97,14 @@ async function pollJob<T>(store: JobStore, jobId: string, options: PollOptions<T
 }
 
 export function createMcpServer(runtime: McpRuntime): McpServer {
-  const server = new McpServer({ name: "ai-counsel", version: PACKAGE_VERSION });
+  const server = new McpServer(
+    { name: "ai-counsel", version: PACKAGE_VERSION },
+    // honoredSubset() drops a client's subscription filter unless subscribe is advertised, and
+    // notifications/resources/updated throws without the resources capability at all.
+    { capabilities: { resources: { subscribe: true, listChanged: true } } },
+  );
   const sessionModels = runtime.sessionModels;
+  registerDeliberationResources(server, runtime.store);
 
   server.registerTool(
     "start_deliberation",
