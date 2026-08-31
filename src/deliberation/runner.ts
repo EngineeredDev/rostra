@@ -185,7 +185,7 @@ export class ConfiguredProtocolRunner implements StageRunner {
             dirname(this.#databasePath),
             "models",
             "minilm",
-            "08a308f628bc9d6774b7922f319eb1b65afa1a82",
+            "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
           ),
           agreementThreshold: similarity.agreement_threshold,
           retrievalThreshold: similarity.retrieval_threshold,

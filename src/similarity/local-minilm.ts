@@ -40,7 +40,7 @@ export class LocalMiniLmProvider extends BaseSimilarityProvider {
       provider: "local_minilm",
       endpoint: "local",
       model: "sentence-transformers/all-MiniLM-L6-v2",
-      revision: "08a308f628bc9d6774b7922f319eb1b65afa1a82",
+      revision: "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
       thresholdsRevision: options.thresholdsRevision,
       agreementThreshold: options.agreementThreshold,
       retrievalThreshold: options.retrievalThreshold,
