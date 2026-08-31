@@ -32,7 +32,7 @@ import { loadRoutingMetrics } from "../models/quality.js";
 import { ProcessRunner, type ProcessRegistration } from "../process/runner.js";
 import { selectAdaptiveCommittee } from "../models/routing.js";
 import { buildStagePrompt } from "../prompts/stage.js";
-import { LocalMiniLmProvider } from "../similarity/local-minilm.js";
+import { createLocalMiniLmProvider } from "../similarity/local-minilm.js";
 import { OpenAiCompatibleEmbeddingProvider } from "../similarity/openai-compatible.js";
 import type { SimilarityProvider } from "../similarity/provider.js";
 import { openStorage } from "../storage/database.js";
@@ -180,13 +180,8 @@ export class ConfiguredProtocolRunner implements StageRunner {
   async #similarityProvider(): Promise<SimilarityProvider> {
     const similarity = this.#config.similarity;
     const provider = similarity.provider === "local_minilm"
-      ? new LocalMiniLmProvider({
-          modelDirectory: join(
-            dirname(this.#databasePath),
-            "models",
-            "minilm",
-            "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
-          ),
+      ? await createLocalMiniLmProvider({
+          dataHome: dirname(this.#databasePath),
           agreementThreshold: similarity.agreement_threshold,
           retrievalThreshold: similarity.retrieval_threshold,
           thresholdsRevision: similarity.thresholds_revision,

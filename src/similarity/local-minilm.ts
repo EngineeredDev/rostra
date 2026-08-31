@@ -13,9 +13,11 @@ const manifestSchema = z.strictObject({
 });
 const vectorsSchema = z.array(z.array(z.number()));
 
+export type MiniLmManifest = z.infer<typeof manifestSchema>;
 export type EmbeddingFunction = (texts: readonly string[]) => Promise<number[][]>;
 
 interface LocalMiniLmOptions {
+  manifest: MiniLmManifest;
   modelDirectory: string;
   agreementThreshold: number;
   retrievalThreshold: number;
@@ -23,14 +25,40 @@ interface LocalMiniLmOptions {
   embedderFactory?: () => Promise<EmbeddingFunction>;
 }
 
+interface LocalMiniLmInput {
+  dataHome: string;
+  agreementThreshold: number;
+  retrievalThreshold: number;
+  thresholdsRevision: string;
+}
 
-export async function loadMiniLmManifest(): Promise<z.infer<typeof manifestSchema>> {
+export async function loadMiniLmManifest(): Promise<MiniLmManifest> {
   return manifestSchema.parse(
     JSON.parse(await readFile(new URL("./models/minilm-manifest.json", import.meta.url), "utf8")),
   );
 }
 
+export function miniLmModelDirectory(dataHome: string, revision: string): string {
+  return join(dataHome, "models", "minilm", revision);
+}
+
+// The manifest is the only pin: callers must not restate the revision, or a repin
+// silently splits the fetch destination from the load path.
+export async function createLocalMiniLmProvider(
+  input: LocalMiniLmInput,
+): Promise<LocalMiniLmProvider> {
+  const manifest = await loadMiniLmManifest();
+  return new LocalMiniLmProvider({
+    manifest,
+    modelDirectory: miniLmModelDirectory(input.dataHome, manifest.revision),
+    agreementThreshold: input.agreementThreshold,
+    retrievalThreshold: input.retrievalThreshold,
+    thresholdsRevision: input.thresholdsRevision,
+  });
+}
+
 export class LocalMiniLmProvider extends BaseSimilarityProvider {
+  readonly #manifest: MiniLmManifest;
   readonly #modelDirectory: string;
   readonly #embedderFactory?: () => Promise<EmbeddingFunction>;
   #embedder?: EmbeddingFunction;
@@ -39,12 +67,13 @@ export class LocalMiniLmProvider extends BaseSimilarityProvider {
     super({
       provider: "local_minilm",
       endpoint: "local",
-      model: "sentence-transformers/all-MiniLM-L6-v2",
-      revision: "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      model: options.manifest.model,
+      revision: options.manifest.revision,
       thresholdsRevision: options.thresholdsRevision,
       agreementThreshold: options.agreementThreshold,
       retrievalThreshold: options.retrievalThreshold,
     });
+    this.#manifest = options.manifest;
     this.#modelDirectory = options.modelDirectory;
     if (options.embedderFactory !== undefined) {
       this.#embedderFactory = options.embedderFactory;
@@ -52,9 +81,8 @@ export class LocalMiniLmProvider extends BaseSimilarityProvider {
   }
 
   async initialize(): Promise<void> {
-    const manifest = await loadMiniLmManifest();
     try {
-      for (const [path, expected] of Object.entries(manifest.files)) {
+      for (const [path, expected] of Object.entries(this.#manifest.files)) {
         if ((await sha256File(join(this.#modelDirectory, path))) !== expected) {
           throw new Error(`Digest mismatch: ${path}`);
         }

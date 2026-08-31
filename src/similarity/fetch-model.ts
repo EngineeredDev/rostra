@@ -4,14 +4,14 @@ import { dirname, join } from "node:path";
 import { z } from "zod/v4";
 import { AppError, errorMessage } from "../errors.js";
 import { sha256File } from "../utils/hash-file.js";
-import { loadMiniLmManifest } from "./local-minilm.js";
+import { loadMiniLmManifest, miniLmModelDirectory } from "./local-minilm.js";
 
 export async function fetchPinnedMiniLm(
   dataHome: string,
   fetchImplementation: typeof fetch = globalThis.fetch,
 ): Promise<string> {
   const manifest = await loadMiniLmManifest();
-  const modelDirectory = join(dataHome, "models", "minilm", manifest.revision);
+  const modelDirectory = miniLmModelDirectory(dataHome, manifest.revision);
   for (const [relativePath, expectedDigest] of Object.entries(manifest.files)) {
     const destination = join(modelDirectory, relativePath);
     try {

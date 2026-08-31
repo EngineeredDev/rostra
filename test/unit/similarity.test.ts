@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocalMiniLmProvider } from "../../src/similarity/local-minilm.js";
+import { loadMiniLmManifest, LocalMiniLmProvider } from "../../src/similarity/local-minilm.js";
 import { OpenAiCompatibleEmbeddingProvider } from "../../src/similarity/openai-compatible.js";
 
 const roots: string[] = [];
@@ -24,6 +24,7 @@ describe("explicit similarity providers", () => {
     }
     let constructed = false;
     const provider = new LocalMiniLmProvider({
+      manifest: await loadMiniLmManifest(),
       modelDirectory: root,
       agreementThreshold: 0.8,
       retrievalThreshold: 0.7,
