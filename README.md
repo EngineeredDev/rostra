@@ -8,6 +8,13 @@ AI Counsel is a TypeScript MCP server for durable, evidence-backed deliberation 
 
 It runs model work in detached worker processes. Clients can disconnect and reconnect without losing job state. The server stores jobs, decisions, evidence, outcomes, and quality metrics in one SQLite database.
 
+## Architecture
+
+- The MCP process validates requests and records durable jobs in SQLite.
+- A detached supervisor claims queued jobs and starts one separate worker process for each job.
+- Workers run configured CLI or HTTP model adapters, publish decision packets, and write Markdown transcripts.
+- Stdio and Streamable HTTP expose the same tools, resources, storage, and worker pool.
+
 ## Requirements
 
 - Node.js 24 or newer
@@ -39,7 +46,21 @@ AI Counsel reads configuration from the first available path:
 3. `~/.config/ai-counsel/config.yaml`
 4. The packaged `config.example.yaml`
 
-AI Counsel writes `ai-counsel.sqlite`, transcripts, and model files to the data directory. Set `AI_COUNSEL_DATA_HOME` to change this directory. The default is `~/.local/share/ai-counsel`.
+AI Counsel writes `ai-counsel.sqlite`, transcripts, and model files to the data directory. It selects this directory in the following order:
+
+1. `AI_COUNSEL_DATA_HOME`
+2. `$XDG_DATA_HOME/ai-counsel`
+3. `~/.local/share/ai-counsel`
+
+### Configuration
+
+The version 2 YAML schema rejects unknown fields. Use `config.example.yaml` as a starter configuration.
+
+Supported CLI adapters are `claude`, `codex`, `droid`, `gemini`, `llamacpp`, and `omp`. Supported HTTP adapters are `ollama`, `lmstudio`, `openrouter`, `nebius`, and `openai`.
+
+The model registry controls the model IDs, reasoning efforts, capabilities, provider families, costs, and latency estimates available for routing.
+
+The default `local_minilm` similarity provider uses a pinned MiniLM model. `pnpm models:fetch` downloads its files and verifies their SHA-256 digests. The `openai_compatible` provider supports a remote embedding endpoint instead.
 
 ## Configure an MCP client
 
@@ -122,10 +143,12 @@ A recovered job can enter `recovery_required` after an uncertain external attemp
 
 ### Deliberations as resources
 
-Every job is also readable as a resource, with no polling:
+Every job is also readable as a resource. Clients do not have to poll a tool:
 
 - `counsel://deliberations/{job_id}` returns what `get_deliberation` returns.
-- `counsel://deliberations/{job_id}/events` returns what `tail_deliberation` returns.
+- `counsel://deliberations/{job_id}/events` returns the first 500 events and a `next_seq` cursor.
+
+Use `tail_deliberation` when you need a custom cursor, limit, or blocking wait.
 
 Both are URI templates, so they appear under `resources/templates/list` rather than
 `resources/list`. The server advertises `resources.subscribe`, and a client on the 2026-07-28
@@ -174,6 +197,18 @@ The command returns these exit codes:
 - `2`: at least one finding meets the threshold.
 
 Decision CI reports stale evidence, changed assumptions, conflicting decisions, superseded precedents, and outcome regressions. It does not modify the repository.
+
+## Command-line utilities
+
+The built CLI also exposes direct job inspection, cancellation, and model download commands:
+
+```bash
+node dist/cli/main.js jobs list
+node dist/cli/main.js jobs cancel <job-id>
+node dist/cli/main.js models fetch
+```
+
+`jobs list` returns the 100 most recent jobs as JSON. `jobs cancel` requests idempotent cancellation for one job.
 
 ## Model and quality tools
 
