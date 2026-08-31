@@ -4,12 +4,15 @@ import {
   analyzeConvergence,
   shouldStopProtocol,
 } from "../../src/deliberation/protocol/convergence.js";
+import { stageKindSchema } from "../../src/config/schema.js";
+import { extractStageSubmission } from "../../src/contracts/submissions.js";
 import { classifyExecutionResult } from "../../src/deliberation/protocol/result-status.js";
 import { invokeStructuredStage } from "../../src/deliberation/protocol/invoke-stage.js";
 import {
   initialProtocolState,
   reduceProtocol,
 } from "../../src/deliberation/protocol/state-machine.js";
+import { buildStagePrompt } from "../../src/prompts/stage.js";
 
 const participants = ["a", "b", "c"];
 
@@ -199,5 +202,65 @@ describe("structured stage invocation", () => {
     expect(result.submission).toMatchObject({ option_id: "a" });
     expect(attempts).toHaveLength(2);
     expect(attempts[1]).toContain("structured_retry");
+  });
+
+  it("tells the retry which contract violations to fix", async () => {
+    const prompts: string[] = [];
+    const stringClaims = JSON.stringify({
+      claims: ["hand-written JavaScript is fine"],
+      assumptions: ["the repository observations are accurate"],
+      recommendation: "keep plain JavaScript",
+      confidence: 0.9,
+      predictions: ["a packaging-only gate proves nothing"],
+    });
+    const validAnalysis = JSON.stringify({
+      claims: [{
+        claim_id: "22222222-2222-4222-8222-222222222222",
+        type: "fact",
+        text: "hand-written JavaScript is fine",
+        confidence: 0.9,
+      }],
+      assumptions: ["the repository observations are accurate"],
+      recommendation: "keep plain JavaScript",
+      confidence: 0.9,
+      predictions: [{
+        statement: "a packaging-only gate proves nothing",
+        probability: 0.8,
+        target_date: "2030-01-01T00:00:00Z",
+        resolution_criteria: "CI reports a runtime failure",
+      }],
+    });
+    const result = await invokeStructuredStage({
+      kind: "independent_analysis",
+      prompt: "analyse",
+      invoke: (prompt) => {
+        prompts.push(prompt);
+        return Promise.resolve(prompts.length === 1
+          ? `reasoning\nAI_COUNSEL_RESULT: ${stringClaims}`
+          : `reasoning\nAI_COUNSEL_RESULT: ${validAnalysis}`);
+      },
+    });
+    expect(result.submission).toMatchObject({ confidence: 0.9 });
+    const repair = prompts[1] ?? "";
+    expect(repair).toContain("claims.0");
+    expect(repair).toContain("expected object, received string");
+    expect(repair).toContain('"claim_id"');
+  });
+});
+
+describe("stage prompt output contract", () => {
+  it("shows element shapes for every stage kind", () => {
+    for (const kind of stageKindSchema.options) {
+      const prompt = buildStagePrompt({
+        question: "q",
+        stageKind: kind,
+        visibility: "question_only",
+        priorResponses: [],
+      });
+      const marker = "AI_COUNSEL_RESULT: ";
+      const example = prompt.slice(prompt.lastIndexOf(marker) + marker.length).trim();
+      expect(example).not.toContain("[]");
+      expect(() => extractStageSubmission(kind, prompt)).not.toThrow();
+    }
   });
 });

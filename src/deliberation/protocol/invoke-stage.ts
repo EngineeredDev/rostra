@@ -1,9 +1,12 @@
 import type { StageKind } from "../../config/schema.js";
 import { extractStageSubmission } from "../../contracts/submissions.js";
 import { AppError } from "../../errors.js";
+import { stageResultExample } from "../../prompts/stage.js";
 import { canonicalJson, type JsonValue } from "../../utils/canonical-json.js";
 
 export type StageAttemptKind = "stage" | "tool_continuation" | "structured_retry";
+
+const MAXIMUM_REPORTED_ISSUES = 12;
 
 interface StructuredStageInput {
   kind: StageKind;
@@ -54,10 +57,27 @@ async function invokeUntilResult(
   }
 }
 
+function describeRejection(error: AppError): string {
+  const issues = error.details;
+  if (!Array.isArray(issues)) return error.message;
+  const described = issues
+    .slice(0, MAXIMUM_REPORTED_ISSUES)
+    .map((issue) => {
+      const path = (issue as { path?: readonly (string | number)[] }).path ?? [];
+      const message = (issue as { message?: string }).message ?? "invalid value";
+      return path.length === 0 ? `- ${message}` : `- ${path.join(".")}: ${message}`;
+    });
+  if (issues.length > MAXIMUM_REPORTED_ISSUES) {
+    described.push(`- (${issues.length - MAXIMUM_REPORTED_ISSUES} further violations omitted)`);
+  }
+  return [error.message, ...described].join("\n");
+}
+
 export async function invokeStructuredStage(
   input: StructuredStageInput,
 ): Promise<StructuredStageResult> {
   const first = await invokeUntilResult(input, input.prompt, "stage");
+  let rejection: AppError;
   try {
     const extracted = extractStageSubmission(input.kind, first.rawText);
     return {
@@ -67,11 +87,16 @@ export async function invokeStructuredStage(
     };
   } catch (error) {
     if (!(error instanceof AppError) || error.code !== "invalid_stage_result") throw error;
+    rejection = error;
   }
 
   const repairPrompt = [
     "Return only a corrected structured result for the prior response.",
     `The stage kind is ${input.kind}.`,
+    "The prior result was rejected:",
+    describeRejection(rejection),
+    "Reuse the prior reasoning; change only the structure so it matches this shape exactly.",
+    `AI_COUNSEL_RESULT: ${stageResultExample(input.kind)}`,
     "End with exactly one AI_COUNSEL_RESULT: {JSON} line.",
     "Prior response:",
     first.rawText,

@@ -575,10 +575,14 @@ export class ConfiguredProtocolRunner implements StageRunner {
         }));
 
         const stageBallots: RawBallot[] = [];
+        const stageFailures: string[] = [];
         let completions = 0;
         for (const stageResult of stageResults) {
           if ("error" in stageResult) {
             failedParticipants.add(stageResult.participant.participant_id);
+            stageFailures.push(
+              `${stageResult.participant.participant_id}: ${errorMessage(stageResult.error)}`,
+            );
             if (stage.kind === "final_ballot") {
               stageBallots.push({
                 participantId: stageResult.participant.participant_id,
@@ -623,9 +627,10 @@ export class ConfiguredProtocolRunner implements StageRunner {
           }
         }
         if (completions < stage.minimumCompletions) {
+          const detail = stageFailures.length === 0 ? "" : ` (${stageFailures.join("; ")})`;
           throw new AppError(
             "insufficient_stage_completions",
-            `${stage.id} completed ${completions}/${stage.minimumCompletions}`,
+            `${stage.id} completed ${completions}/${stage.minimumCompletions}${detail}`,
           );
         }
         protocolState = reduceProtocol(protocolState, { type: "complete_stage", stageId: stage.id });
