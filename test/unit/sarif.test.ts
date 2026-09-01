@@ -3,6 +3,7 @@ import { Ajv } from "ajv/dist/ajv.js";
 import { z } from "zod/v4";
 import { describe, expect, it } from "vitest";
 import { renderSarif } from "../../src/decision-ci/sarif.js";
+import { PACKAGE_VERSION } from "../../src/version.js";
 import { reviewDecisionChangeOutputSchema } from "../../src/contracts/tools.js";
 
 const review = reviewDecisionChangeOutputSchema.parse({
@@ -25,7 +26,9 @@ const review = reviewDecisionChangeOutputSchema.parse({
 
 describe("SARIF 2.1.0 output", () => {
   it("validates against the pinned schema and emits stable rule metadata", async () => {
-    const sarif = renderSarif(review, "1.2.3");
+    const packageMetadata = JSON.parse(await readFile("package.json", "utf8")) as { version: string };
+    expect(PACKAGE_VERSION).toBe(packageMetadata.version);
+    const sarif = renderSarif(review, PACKAGE_VERSION);
     const schema = z.record(z.string(), z.unknown()).parse(JSON.parse(
       await readFile("test/fixtures/sarif-2.1.0.schema.json", "utf8"),
     ));
@@ -36,7 +39,7 @@ describe("SARIF 2.1.0 output", () => {
       $schema: "https://json.schemastore.org/sarif-2.1.0.json",
       version: "2.1.0",
       runs: [{
-        tool: { driver: { name: "rostra-decision-ci", version: "1.2.3" } },
+        tool: { driver: { name: "rostra-decision-ci", version: PACKAGE_VERSION } },
         originalUriBaseIds: { "%SRCROOT%": { uri: "file:///workspace/" } },
         results: [{
           ruleId: "stale_evidence",
