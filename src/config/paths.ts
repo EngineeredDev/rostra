@@ -14,6 +14,23 @@ interface ConfigPathOptions extends PathOptions {
   packageRoot?: string;
 }
 
+export function resolveUserConfigPath(options: PathOptions = {}): string {
+  const env = options.env ?? process.env;
+  const explicit = env.AI_COUNSEL_CONFIG;
+  if (explicit !== undefined && explicit.trim() !== "") {
+    return resolve(explicit);
+  }
+  return env.XDG_CONFIG_HOME === undefined
+    ? join(resolve(options.homeDir ?? homedir()), ".config", "ai-counsel", "config.yaml")
+    : join(resolve(env.XDG_CONFIG_HOME), "ai-counsel", "config.yaml");
+}
+
+export function resolvePackagedConfigPath(options: ConfigPathOptions = {}): string {
+  const packageRoot =
+    options.packageRoot ?? dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+  return join(resolve(packageRoot), "config.example.yaml");
+}
+
 async function readable(path: string): Promise<boolean> {
   try {
     await access(path, constants.R_OK);
@@ -23,12 +40,10 @@ async function readable(path: string): Promise<boolean> {
   }
 }
 
-
 export async function resolveConfigPath(options: ConfigPathOptions = {}): Promise<string> {
   const env = options.env ?? process.env;
   const home = options.homeDir ?? homedir();
-  const packageRoot =
-    options.packageRoot ?? dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+  const homeConfig = join(resolve(home), ".config", "ai-counsel", "config.yaml");
   const explicit = env.AI_COUNSEL_CONFIG;
   if (explicit !== undefined && explicit.trim() !== "") {
     const path = resolve(explicit);
@@ -38,13 +53,10 @@ export async function resolveConfigPath(options: ConfigPathOptions = {}): Promis
     return path;
   }
 
-  const candidates = [
-    env.XDG_CONFIG_HOME === undefined
-      ? undefined
-      : join(resolve(env.XDG_CONFIG_HOME), "ai-counsel", "config.yaml"),
-    join(resolve(home), ".config", "ai-counsel", "config.yaml"),
-    join(resolve(packageRoot), "config.example.yaml"),
-  ].filter((value): value is string => value !== undefined);
+  const userConfig = resolveUserConfigPath(options);
+  const candidates = userConfig === homeConfig
+    ? [homeConfig, resolvePackagedConfigPath(options)]
+    : [userConfig, homeConfig, resolvePackagedConfigPath(options)];
 
   for (const candidate of candidates) {
     if (await readable(candidate)) {

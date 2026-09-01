@@ -18,13 +18,15 @@ It runs model work in detached worker processes. Clients can disconnect and reco
 ## Requirements
 
 - Node.js 24 or newer
-- pnpm 10.11.0
-- Git
 - One configured model adapter
 
 CLI adapters also require their matching executable. HTTP adapters require access to their configured endpoint.
 
+Git and pnpm 10.11.0 are only required for a source install.
+
 ## Install from source
+
+The public npm release is pending. Use the source install until the package is available:
 
 ```bash
 git clone https://github.com/stoopkidddd/ai-counsel.git
@@ -32,12 +34,24 @@ cd ai-counsel
 corepack enable
 pnpm install --frozen-lockfile
 pnpm build
-mkdir -p ~/.config/ai-counsel
-cp config.example.yaml ~/.config/ai-counsel/config.yaml
-pnpm models:fetch
+node dist/cli/main.js init
 ```
 
+The `init` command creates the user configuration and data directory. It also downloads and verifies the pinned MiniLM model when required.
+
 Edit `~/.config/ai-counsel/config.yaml`. Enable only the adapters and models that you use.
+
+The same command is safe to run after an upgrade. It never replaces an existing configuration.
+
+### npm and MCP Registry release
+
+The npm package and MCP Registry metadata are ready, but `ai-counsel@0.3.0-beta.1` is not public yet.
+
+After the first public release, this command will provide the one-command setup:
+
+```bash
+npx --yes ai-counsel@0.3.0-beta.1 init
+```
 
 AI Counsel reads configuration from the first available path:
 
@@ -60,21 +74,31 @@ Supported CLI adapters are `claude`, `codex`, `droid`, `gemini`, `llamacpp`, and
 
 The model registry controls the model IDs, reasoning efforts, capabilities, provider families, costs, and latency estimates available for routing.
 
-The default `local_minilm` similarity provider uses a pinned MiniLM model. `pnpm models:fetch` downloads its files and verifies their SHA-256 digests. The `openai_compatible` provider supports a remote embedding endpoint instead.
+The default `local_minilm` similarity provider uses a pinned MiniLM model. The `openai_compatible` provider supports a remote embedding endpoint instead.
 
 ## Configure an MCP client
 
-Use an absolute repository path in the client configuration:
+Use the absolute source path until the npm package is public:
 
 ```json
 {
   "mcpServers": {
     "ai-counsel": {
       "command": "node",
-      "args": ["/absolute/path/to/ai-counsel/dist/cli/main.js"],
-      "env": {
-        "AI_COUNSEL_CONFIG": "/absolute/path/to/config.yaml"
-      }
+      "args": ["/absolute/path/to/ai-counsel/dist/cli/main.js"]
+    }
+  }
+}
+```
+
+After npm publication, clients can use the exact package version:
+
+```json
+{
+  "mcpServers": {
+    "ai-counsel": {
+      "command": "npx",
+      "args": ["--yes", "ai-counsel@0.3.0-beta.1"]
     }
   }
 }
@@ -200,9 +224,10 @@ Decision CI reports stale evidence, changed assumptions, conflicting decisions, 
 
 ## Command-line utilities
 
-The built CLI also exposes direct job inspection, cancellation, and model download commands:
+The CLI also initializes user files and manages jobs and model files:
 
 ```bash
+node dist/cli/main.js init
 node dist/cli/main.js jobs list
 node dist/cli/main.js jobs cancel <job-id>
 node dist/cli/main.js models fetch

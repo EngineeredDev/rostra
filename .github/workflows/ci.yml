@@ -27,7 +27,7 @@ jobs:
       - run: pnpm test:e2e
       - run: pnpm generate:schemas
       - run: git diff --exit-code
-      - run: pnpm pack --dry-run
+      - run: pnpm test:package
 
   docker:
     runs-on: ubuntu-latest

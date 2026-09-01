@@ -2,6 +2,17 @@
   "name": "ai-counsel",
   "version": "0.3.0-beta.1",
   "description": "Durable evidence-backed deliberation and Decision CI MCP server",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stoopkidddd/ai-counsel.git"
+  },
+  "homepage": "https://github.com/stoopkidddd/ai-counsel#readme",
+  "bugs": {
+    "url": "https://github.com/stoopkidddd/ai-counsel/issues"
+  },
+  "keywords": ["mcp", "model-context-protocol", "deliberation", "decision-making"],
+  "mcpName": "io.github.stoopkidddd/ai-counsel",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -15,10 +26,12 @@
   "files": [
     "dist",
     "config.example.yaml",
+    "server.json",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
+    "prepack": "pnpm build",
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc -p tsconfig.typecheck.json",
     "lint": "eslint .",
@@ -26,6 +39,7 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
+    "test:package": "node scripts/smoke-package.mjs",
     "generate:schemas": "node dist/scripts/generate-schemas.js",
     "models:fetch": "node dist/cli/main.js models fetch"
   },

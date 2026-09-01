@@ -2,6 +2,7 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod/v4";
+import { initialize } from "./init.js";
 import { loadConfig } from "../config/loader.js";
 import { resolveConfigPath, resolveDataHome } from "../config/paths.js";
 import { DecisionCiReviewer } from "../decision-ci/review.js";
@@ -152,6 +153,21 @@ async function runServe(args: readonly string[]): Promise<void> {
 export async function runCli(args: readonly string[]): Promise<void> {
   if (args.length === 0) {
     await runMcpServer();
+    return;
+  }
+  if (args[0] === "init") {
+    if (args.length !== 1) {
+      throw new AppError("invalid_command", "Usage: ai-counsel init");
+    }
+    const result = await initialize();
+    const lines = [
+      `${result.configCreated ? "Created" : "Kept existing"} configuration: ${result.configPath}`,
+      `Data directory: ${result.dataHome}`,
+    ];
+    if (result.modelDirectory !== undefined) {
+      lines.push(`Similarity model: ${result.modelDirectory}`);
+    }
+    process.stdout.write(`${lines.join("\n")}\n`);
     return;
   }
   if (args[0] === "jobs") {
