@@ -73,7 +73,7 @@ describe("decision packet rendering", () => {
     expect(prompt).toContain("P1: alpha response");
     expect(prompt).toContain("P2: beta response");
     expect(prompt).not.toContain("participant alpha");
-    expect(prompt).toContain("AI_COUNSEL_RESULT:");
+    expect(prompt).toContain("ROSTRA_RESULT:");
     expect(prompt).toContain("- option-a: Option A");
     expect(prompt).toContain("Assigned stance: Prefer the lower-risk option");
     const questionOnly = buildStagePrompt({

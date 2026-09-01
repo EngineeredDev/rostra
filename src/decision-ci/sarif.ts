@@ -23,7 +23,7 @@ export function renderSarif(
     runs: [{
       tool: {
         driver: {
-          name: "ai-counsel-decision-ci",
+          name: "rostra-decision-ci",
           version: packageVersion,
           rules: ruleIds.map((id) => ({
             id,

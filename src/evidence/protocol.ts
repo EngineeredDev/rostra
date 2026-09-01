@@ -30,10 +30,10 @@ export interface EvidenceToolResult {
 }
 
 export function extractEvidenceToolRequest(rawText: string): EvidenceToolRequest | undefined {
-  const marker = "AI_COUNSEL_TOOL_REQUEST:";
+  const marker = "ROSTRA_TOOL_REQUEST:";
   const lines = rawText.split(/\r?\n/u)
     .filter((line) => line.trimStart().startsWith(marker));
-  if (lines.length > 1 || (lines.length === 1 && rawText.includes("AI_COUNSEL_RESULT:"))) {
+  if (lines.length > 1 || (lines.length === 1 && rawText.includes("ROSTRA_RESULT:"))) {
     throw new AppError("invalid_evidence_request", "A response must contain one tool request or one final result");
   }
   const last = lines.at(-1);

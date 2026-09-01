@@ -25,9 +25,9 @@ const request = startDeliberationInputSchema.parse({
 
 describe("stale job recovery", () => {
   it("requeues stale dispatch and checkpointed work without replaying attempts", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-recovery-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-recovery-"));
     roots.push(root);
-    const store = new JobStore(await openStorage(join(root, "ai-counsel.sqlite")), {
+    const store = new JobStore(await openStorage(join(root, "rostra.sqlite")), {
       dedupeSuccessMs: 1_000,
       leaseMs: 100,
     });
@@ -64,9 +64,9 @@ describe("stale job recovery", () => {
   });
 
   it("marks external attempts uncertain and requires an explicit retry ordinal", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-uncertain-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-uncertain-"));
     roots.push(root);
-    const store = new JobStore(await openStorage(join(root, "ai-counsel.sqlite")), {
+    const store = new JobStore(await openStorage(join(root, "rostra.sqlite")), {
       dedupeSuccessMs: 1_000,
       leaseMs: 100,
     });

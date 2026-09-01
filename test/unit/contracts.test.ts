@@ -43,7 +43,7 @@ describe("shared wire contracts", () => {
   });
 
   it("extracts one terminal structured result", () => {
-    const raw = `Rationale first.\nAI_COUNSEL_RESULT: {"option_id":"option-a","confidence":0.8,"rationale":"bounded","continue_debate":false}`;
+    const raw = `Rationale first.\nROSTRA_RESULT: {"option_id":"option-a","confidence":0.8,"rationale":"bounded","continue_debate":false}`;
     const result = extractStageSubmission("final_ballot", raw);
     expect(result.submission).toMatchObject({ option_id: "option-a", confidence: 0.8 });
     expect(result.raw_text).toBe(raw);

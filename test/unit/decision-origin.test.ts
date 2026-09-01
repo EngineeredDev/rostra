@@ -16,9 +16,9 @@ afterEach(async () => {
 
 describe("durable decision origins", () => {
   it("survives operational retention and makes publication idempotent", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-origin-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-origin-"));
     roots.push(root);
-    const db = await openStorage(join(root, "ai-counsel.sqlite"));
+    const db = await openStorage(join(root, "rostra.sqlite"));
     const store = new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 1_000 });
     const request = startDeliberationInputSchema.parse({
       question: "retain this decision",

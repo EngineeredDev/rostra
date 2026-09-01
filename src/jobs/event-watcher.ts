@@ -11,13 +11,13 @@ const ACTIVE_STATUSES: readonly JobStatus[] = [
 const JOB_PAGE = 100;
 const EVENT_BATCH = 500;
 
-export interface CounselNotifier {
+export interface RostraNotifier {
   resourceUpdated(uri: string): void;
 }
 
 export interface JobEventWatcherOptions {
   store: JobStore;
-  notifier: CounselNotifier;
+  notifier: RostraNotifier;
   intervalMs: number;
   urisForJob: (jobId: string) => readonly string[];
   onerror?: (error: unknown) => void;
@@ -33,7 +33,7 @@ export interface JobEventWatcherOptions {
  */
 export class JobEventWatcher {
   readonly #store: JobStore;
-  readonly #notifier: CounselNotifier;
+  readonly #notifier: RostraNotifier;
   readonly #intervalMs: number;
   readonly #urisForJob: (jobId: string) => readonly string[];
   readonly #onerror: (error: unknown) => void;

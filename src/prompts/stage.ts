@@ -70,8 +70,8 @@ export function buildStagePrompt(input: StagePromptInput): string {
     lines.push(
       `Allowed evidence operations: ${[...input.allowedCapabilities].sort().join(", ")}.`,
       "To inspect evidence, return one line and no final result:",
-      'AI_COUNSEL_TOOL_REQUEST: {"name":"read_file","arguments":{"path":"relative/path"},"claim_id":"optional-UUID","polarity":"supports"}',
-      "After AI_COUNSEL_TOOL_RESULT, use its evidence_id in the final structured result.",
+      'ROSTRA_TOOL_REQUEST: {"name":"read_file","arguments":{"path":"relative/path"},"claim_id":"optional-UUID","polarity":"supports"}',
+      "After ROSTRA_TOOL_RESULT, use its evidence_id in the final structured result.",
     );
   }
   lines.push(
@@ -79,7 +79,7 @@ export function buildStagePrompt(input: StagePromptInput): string {
     "End the response with exactly one structured result line.",
     "Match the shape below exactly: array elements keep the field names shown, and every"
     + " *_id value must be a distinct RFC 4122 UUID.",
-    `AI_COUNSEL_RESULT: ${outputInstructions[input.stageKind]}`,
+    `ROSTRA_RESULT: ${outputInstructions[input.stageKind]}`,
   );
   return lines.join("\n\n");
 }

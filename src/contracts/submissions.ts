@@ -96,7 +96,7 @@ export interface ExtractedSubmission {
 
 export function extractStageSubmission(kind: StageKind, rawText: string): ExtractedSubmission {
   stageKindSchema.parse(kind);
-  const marker = "AI_COUNSEL_RESULT:";
+  const marker = "ROSTRA_RESULT:";
   const markerIndex = rawText.lastIndexOf(marker);
   if (markerIndex < 0 || rawText.slice(markerIndex + marker.length).trim() === "") {
     throw new AppError("invalid_stage_result", `Stage ${kind} did not end with ${marker}`);

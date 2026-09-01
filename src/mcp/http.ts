@@ -51,7 +51,7 @@ export async function runHttpServer(options: HttpServerOptions = {}): Promise<Ht
   const allowedOrigins = localhostAllowedOrigins();
   if (!allowedHostnames.includes(host)) {
     process.stderr.write(
-      `ai-counsel: ${host} is not a loopback address; this MCP endpoint is unauthenticated\n`,
+      `rostra: ${host} is not a loopback address; this MCP endpoint is unauthenticated\n`,
     );
   }
 

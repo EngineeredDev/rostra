@@ -25,7 +25,7 @@ afterEach(async () => {
 
 describe("local Decision CI", () => {
   it("reports changed critical evidence with deterministic threshold behavior", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-ci-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-ci-"));
     roots.push(root);
     await execFileAsync("git", ["init"], { cwd: root });
     await execFileAsync("git", ["config", "user.email", "ci@example.test"], { cwd: root });
@@ -37,7 +37,7 @@ describe("local Decision CI", () => {
     const { stdout: baseStdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root });
     const base = baseStdout.trim();
 
-    const db = await openStorage(join(root, "ai-counsel.sqlite"));
+    const db = await openStorage(join(root, "rostra.sqlite"));
     const workspace = await deriveWorkspaceIdentity(root);
     const decisionId = "11111111-1111-4111-8111-111111111111";
     const claimId = "22222222-2222-4222-8222-222222222222";
@@ -151,8 +151,8 @@ describe("local Decision CI", () => {
     ].join("\n"));
     const environment = {
       ...process.env,
-      AI_COUNSEL_CONFIG: configPath,
-      AI_COUNSEL_DATA_HOME: root,
+      ROSTRA_CONFIG: configPath,
+      ROSTRA_DATA_HOME: root,
     };
     const cli = spawnSync(process.execPath, [
       resolve("dist/cli/main.js"),

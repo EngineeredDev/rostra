@@ -17,12 +17,12 @@ afterEach(async () => {
 
 describe("workspace-scoped decisions", () => {
   it("scopes direct reads, detects stale evidence, and appends outcomes", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-decisions-"));
-    const otherRoot = await mkdtemp(join(tmpdir(), "ai-counsel-other-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-decisions-"));
+    const otherRoot = await mkdtemp(join(tmpdir(), "rostra-other-"));
     roots.push(root, otherRoot);
     const evidencePath = join(root, "evidence.txt");
     await writeFile(evidencePath, "original");
-    const db = await openStorage(join(root, "ai-counsel.sqlite"));
+    const db = await openStorage(join(root, "rostra.sqlite"));
     const workspace = await deriveWorkspaceIdentity(root);
     const decisionId = randomUUID();
     const supersedingId = randomUUID();

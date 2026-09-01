@@ -98,7 +98,7 @@ async function pollJob<T>(store: JobStore, jobId: string, options: PollOptions<T
 
 export function createMcpServer(runtime: McpRuntime): McpServer {
   const server = new McpServer(
-    { name: "ai-counsel", version: PACKAGE_VERSION },
+    { name: "rostra", version: PACKAGE_VERSION },
     // honoredSubset() drops a client's subscription filter unless subscribe is advertised, and
     // notifications/resources/updated throws without the resources capability at all.
     { capabilities: { resources: { subscribe: true, listChanged: true } } },

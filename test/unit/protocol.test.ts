@@ -196,7 +196,7 @@ describe("structured stage invocation", () => {
         attempts.push(`${attemptKind}:${prompt}`);
         return Promise.resolve(attempts.length === 1
           ? "invalid"
-          : 'fixed\nAI_COUNSEL_RESULT: {"option_id":"a","confidence":1,"rationale":"ok","continue_debate":false}');
+          : 'fixed\nROSTRA_RESULT: {"option_id":"a","confidence":1,"rationale":"ok","continue_debate":false}');
       },
     });
     expect(result.submission).toMatchObject({ option_id: "a" });
@@ -236,8 +236,8 @@ describe("structured stage invocation", () => {
       invoke: (prompt) => {
         prompts.push(prompt);
         return Promise.resolve(prompts.length === 1
-          ? `reasoning\nAI_COUNSEL_RESULT: ${stringClaims}`
-          : `reasoning\nAI_COUNSEL_RESULT: ${validAnalysis}`);
+          ? `reasoning\nROSTRA_RESULT: ${stringClaims}`
+          : `reasoning\nROSTRA_RESULT: ${validAnalysis}`);
       },
     });
     expect(result.submission).toMatchObject({ confidence: 0.9 });
@@ -257,7 +257,7 @@ describe("stage prompt output contract", () => {
         visibility: "question_only",
         priorResponses: [],
       });
-      const marker = "AI_COUNSEL_RESULT: ";
+      const marker = "ROSTRA_RESULT: ";
       const example = prompt.slice(prompt.lastIndexOf(marker) + marker.length).trim();
       expect(example).not.toContain("[]");
       expect(() => extractStageSubmission(kind, prompt)).not.toThrow();

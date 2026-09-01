@@ -14,9 +14,9 @@ afterEach(async () => {
 
 describe("calibrated model quality", () => {
   it("uses the latest 100 predictions and p75 of the latest latency samples", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-quality-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-quality-"));
     roots.push(root);
-    const db = await openStorage(join(root, "ai-counsel.sqlite"));
+    const db = await openStorage(join(root, "rostra.sqlite"));
     db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES ('w', ?, 1)")
       .run(root);
     db.prepare(`

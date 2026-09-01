@@ -42,9 +42,9 @@ const config = configSchema.parse({
 });
 
 async function runtime(): Promise<McpRuntime> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-session-models-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-session-models-"));
   roots.push(root);
-  const db = await openStorage(join(root, "ai-counsel.sqlite"));
+  const db = await openStorage(join(root, "rostra.sqlite"));
   const store = new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 5_000 });
   stores.push(store);
   return {

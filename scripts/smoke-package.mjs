@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -15,11 +15,13 @@ if (
 ) {
   throw new Error("package.json and server.json release metadata do not match");
 }
-const root = await mkdtemp(join(tmpdir(), "ai-counsel-package-"));
+const root = await mkdtemp(join(tmpdir(), "rostra-package-"));
 
 try {
   execFileSync("pnpm", ["pack", "--pack-destination", root], { stdio: "inherit" });
-  const archive = join(root, `ai-counsel-${packageValue.version}.tgz`);
+  const archives = (await readdir(root)).filter((name) => name.endsWith(".tgz"));
+  if (archives.length !== 1) throw new Error(`Expected one package archive, found ${archives.length}`);
+  const archive = join(root, archives[0]);
   const installRoot = join(root, "install");
   execFileSync("npm", ["install", "--prefix", installRoot, archive], { stdio: "inherit" });
 
@@ -43,13 +45,18 @@ storage: {}
 decision_graph: {}
 `);
 
-  const entrypoint = join(installRoot, "node_modules", "ai-counsel", "dist", "cli", "main.js");
+  const cli = join(
+    installRoot,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "rostra.cmd" : "rostra",
+  );
   const env = {
     ...process.env,
-    AI_COUNSEL_CONFIG: configPath,
-    AI_COUNSEL_DATA_HOME: dataHome,
+    ROSTRA_CONFIG: configPath,
+    ROSTRA_DATA_HOME: dataHome,
   };
-  const initOutput = execFileSync(process.execPath, [entrypoint, "init"], {
+  const initOutput = execFileSync(cli, ["init"], {
     encoding: "utf8",
     env,
   });
@@ -57,7 +64,7 @@ decision_graph: {}
     throw new Error(`Unexpected init output: ${initOutput}`);
   }
 
-  const jobsOutput = execFileSync(process.execPath, [entrypoint, "jobs", "list"], {
+  const jobsOutput = execFileSync(cli, ["jobs", "list"], {
     encoding: "utf8",
     env,
   });

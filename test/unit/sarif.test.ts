@@ -36,7 +36,7 @@ describe("SARIF 2.1.0 output", () => {
       $schema: "https://json.schemastore.org/sarif-2.1.0.json",
       version: "2.1.0",
       runs: [{
-        tool: { driver: { name: "ai-counsel-decision-ci", version: "1.2.3" } },
+        tool: { driver: { name: "rostra-decision-ci", version: "1.2.3" } },
         originalUriBaseIds: { "%SRCROOT%": { uri: "file:///workspace/" } },
         results: [{
           ruleId: "stale_evidence",

@@ -13,7 +13,7 @@ afterEach(async () => {
 
 describe("explicit similarity providers", () => {
   it("fails corrupt local artifacts before constructing the embedder", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-similarity-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-similarity-"));
     roots.push(root);
     await mkdir(join(root, "onnx"), { recursive: true });
     for (const path of [

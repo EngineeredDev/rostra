@@ -11,7 +11,7 @@ import { ensureSupervisor } from "../jobs/supervisor.js";
 import { openStorage } from "../storage/database.js";
 import type { McpRuntime } from "./server.js";
 
-export interface CounselRuntime {
+export interface RostraRuntime {
   runtime: McpRuntime;
   store: JobStore;
   config: Config;
@@ -34,16 +34,16 @@ async function assertBuildUnchanged(
   if (currentBuildId !== buildId || currentConfigDigest !== configDigest) {
     throw new AppError(
       "stale_server_build",
-      "The build or configuration changed after this server started. Restart ai-counsel before dispatching more work.",
+      "The build or configuration changed after this server started. Restart rostra before dispatching more work.",
     );
   }
 }
 
 /** Opens storage and assembles the runtime shared by the stdio and HTTP entrypoints. */
-export async function createRuntime(): Promise<CounselRuntime> {
+export async function createRuntime(): Promise<RostraRuntime> {
   const configPath = await resolveConfigPath();
   const config = await loadConfig(configPath);
-  const databasePath = join(resolveDataHome(), "ai-counsel.sqlite");
+  const databasePath = join(resolveDataHome(), "rostra.sqlite");
   const db = await openStorage(databasePath, {
     busyTimeoutMs: config.storage.busy_timeout_ms,
   });
@@ -70,9 +70,9 @@ export async function createRuntime(): Promise<CounselRuntime> {
         config,
         buildId,
         configDigest,
-        ...(process.env.AI_COUNSEL_WORKER_ENTRYPOINT === undefined
+        ...(process.env.ROSTRA_WORKER_ENTRYPOINT === undefined
           ? {}
-          : { workerEntrypoint: process.env.AI_COUNSEL_WORKER_ENTRYPOINT }),
+          : { workerEntrypoint: process.env.ROSTRA_WORKER_ENTRYPOINT }),
       });
     },
   };

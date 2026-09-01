@@ -65,7 +65,7 @@ async function freePort(): Promise<number> {
 }
 
 async function serve(): Promise<{ endpoint: string; dataHome: string }> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-http-e2e-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-http-e2e-"));
   roots.push(root);
   const dataHome = join(root, "data");
   const configPath = join(root, "config.yaml");
@@ -99,9 +99,9 @@ decision_graph: {}
     {
       cwd: process.cwd(),
       env: environment({
-        AI_COUNSEL_CONFIG: configPath,
-        AI_COUNSEL_DATA_HOME: dataHome,
-        AI_COUNSEL_WORKER_ENTRYPOINT: resolve("test/fixtures/fake-worker.mjs"),
+        ROSTRA_CONFIG: configPath,
+        ROSTRA_DATA_HOME: dataHome,
+        ROSTRA_WORKER_ENTRYPOINT: resolve("test/fixtures/fake-worker.mjs"),
       }),
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -129,7 +129,7 @@ decision_graph: {}
 
 async function connect(endpoint: string, modern = false): Promise<Client> {
   const client = new Client(
-    { name: "ai-counsel-http-e2e", version: "1" },
+    { name: "rostra-http-e2e", version: "1" },
     // subscriptions/listen exists only on the 2026-07-28 era; the default is the 2025 handshake,
     // which the other cases keep exercising because the endpoint still serves it.
     modern ? { versionNegotiation: { mode: "auto" } } : {},
@@ -171,7 +171,7 @@ describe("compiled MCP over Streamable HTTP", () => {
 
     await client.close();
 
-    const db = new Database(join(dataHome, "ai-counsel.sqlite"), { readonly: true, fileMustExist: true });
+    const db = new Database(join(dataHome, "rostra.sqlite"), { readonly: true, fileMustExist: true });
     const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
     db.close();
     if (state !== undefined) supervisors.add(state.pid);
@@ -207,7 +207,7 @@ describe("compiled MCP over Streamable HTTP", () => {
       },
     })).structuredContent);
     const jobId = z.uuid().parse(started.job_id);
-    const jobUri = `counsel://deliberations/${jobId}`;
+    const jobUri = `rostra://deliberations/${jobId}`;
 
     const observed: string[] = [];
     const ignored: string[] = [];
@@ -219,7 +219,7 @@ describe("compiled MCP over Streamable HTTP", () => {
     });
     const subscription = await subscriber.listen({ resourceSubscriptions: [jobUri] });
     const unrelated = await bystander.listen({
-      resourceSubscriptions: ["counsel://deliberations/00000000-0000-4000-8000-000000000000"],
+      resourceSubscriptions: ["rostra://deliberations/00000000-0000-4000-8000-000000000000"],
     });
 
     const terminal = objectSchema.parse((await subscriber.callTool({
@@ -238,7 +238,7 @@ describe("compiled MCP over Streamable HTTP", () => {
     await subscriber.close();
     await bystander.close();
 
-    const db = new Database(join(dataHome, "ai-counsel.sqlite"), { readonly: true, fileMustExist: true });
+    const db = new Database(join(dataHome, "rostra.sqlite"), { readonly: true, fileMustExist: true });
     const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
     db.close();
     if (state !== undefined) supervisors.add(state.pid);

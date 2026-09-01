@@ -24,7 +24,7 @@ decision_graph: {}
 `;
 
 async function write(body: string): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-http-config-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-http-config-"));
   roots.push(root);
   const path = join(root, "config.yaml");
   await writeFile(path, body);

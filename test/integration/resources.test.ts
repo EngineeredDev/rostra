@@ -53,9 +53,9 @@ const request = startDeliberationInputSchema.parse({
 });
 
 async function harness(): Promise<{ client: Client; server: McpServer; store: JobStore }> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-resources-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-resources-"));
   roots.push(root);
-  const db = await openStorage(join(root, "ai-counsel.sqlite"));
+  const db = await openStorage(join(root, "rostra.sqlite"));
   const store = new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 5_000 });
   stores.push(store);
   const server = createMcpServer({
@@ -101,8 +101,8 @@ describe("deliberation resources", () => {
     const { client } = await harness();
     const templates = await client.listResourceTemplates();
     expect(templates.resourceTemplates.map((template) => template.uriTemplate).sort()).toEqual([
-      "counsel://deliberations/{job_id}",
-      "counsel://deliberations/{job_id}/events",
+      "rostra://deliberations/{job_id}",
+      "rostra://deliberations/{job_id}/events",
     ]);
     await expect(client.listResources()).resolves.toMatchObject({ resources: [] });
   });
@@ -134,7 +134,7 @@ describe("deliberation resources", () => {
   it("reports a job that no longer exists as a failed read", async () => {
     const { client } = await harness();
     await expect(
-      client.readResource({ uri: "counsel://deliberations/00000000-0000-4000-8000-000000000000" }),
+      client.readResource({ uri: "rostra://deliberations/00000000-0000-4000-8000-000000000000" }),
     ).rejects.toThrow();
   });
 

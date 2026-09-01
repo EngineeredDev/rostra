@@ -1,10 +1,6 @@
-<p align="center">
-  <img src="assets/ai-counsel.png" alt="AI Counsel" width="400">
-</p>
+# Rostra
 
-# AI Counsel
-
-AI Counsel is a TypeScript MCP server for durable, evidence-backed deliberation and Decision CI.
+Rostra is a TypeScript MCP server for durable, evidence-backed deliberation and Decision CI.
 
 It runs model work in detached worker processes. Clients can disconnect and reconnect without losing job state. The server stores jobs, decisions, evidence, outcomes, and quality metrics in one SQLite database.
 
@@ -29,8 +25,8 @@ Git and pnpm 10.11.0 are only required for a source install.
 The public npm release is pending. Use the source install until the package is available:
 
 ```bash
-git clone https://github.com/stoopkidddd/ai-counsel.git
-cd ai-counsel
+git clone https://github.com/EngineeredDev/rostra.git
+cd rostra
 corepack enable
 pnpm install --frozen-lockfile
 pnpm build
@@ -39,32 +35,32 @@ node dist/cli/main.js init
 
 The `init` command creates the user configuration and data directory. It also downloads and verifies the pinned MiniLM model when required.
 
-Edit `~/.config/ai-counsel/config.yaml`. Enable only the adapters and models that you use.
+Edit `~/.config/rostra/config.yaml`. Enable only the adapters and models that you use.
 
 The same command is safe to run after an upgrade. It never replaces an existing configuration.
 
 ### npm and MCP Registry release
 
-The npm package and MCP Registry metadata are ready, but `ai-counsel@0.3.0-beta.1` is not public yet.
+The npm package and MCP Registry metadata are ready, but `@engineereddev/rostra@0.1.0-beta.1` is not public yet.
 
 After the first public release, this command will provide the one-command setup:
 
 ```bash
-npx --yes ai-counsel@0.3.0-beta.1 init
+npx --yes @engineereddev/rostra@0.1.0-beta.1 init
 ```
 
-AI Counsel reads configuration from the first available path:
+Rostra reads configuration from the first available path:
 
-1. `AI_COUNSEL_CONFIG`
-2. `$XDG_CONFIG_HOME/ai-counsel/config.yaml`
-3. `~/.config/ai-counsel/config.yaml`
+1. `ROSTRA_CONFIG`
+2. `$XDG_CONFIG_HOME/rostra/config.yaml`
+3. `~/.config/rostra/config.yaml`
 4. The packaged `config.example.yaml`
 
-AI Counsel writes `ai-counsel.sqlite`, transcripts, and model files to the data directory. It selects this directory in the following order:
+Rostra writes `rostra.sqlite`, transcripts, and model files to the data directory. It selects this directory in the following order:
 
-1. `AI_COUNSEL_DATA_HOME`
-2. `$XDG_DATA_HOME/ai-counsel`
-3. `~/.local/share/ai-counsel`
+1. `ROSTRA_DATA_HOME`
+2. `$XDG_DATA_HOME/rostra`
+3. `~/.local/share/rostra`
 
 ### Configuration
 
@@ -83,9 +79,9 @@ Use the absolute source path until the npm package is public:
 ```json
 {
   "mcpServers": {
-    "ai-counsel": {
+    "rostra": {
       "command": "node",
-      "args": ["/absolute/path/to/ai-counsel/dist/cli/main.js"]
+      "args": ["/absolute/path/to/rostra/dist/cli/main.js"]
     }
   }
 }
@@ -96,9 +92,9 @@ After npm publication, clients can use the exact package version:
 ```json
 {
   "mcpServers": {
-    "ai-counsel": {
+    "rostra": {
       "command": "npx",
-      "args": ["--yes", "ai-counsel@0.3.0-beta.1"]
+      "args": ["--yes", "@engineereddev/rostra@0.1.0-beta.1"]
     }
   }
 }
@@ -108,7 +104,7 @@ The server uses stdio transport by default. It writes protocol messages only to 
 
 ### HTTP transport
 
-`ai-counsel serve --http` serves the same tool surface over Streamable HTTP at `/mcp`:
+`rostra serve --http` serves the same tool surface over Streamable HTTP at `/mcp`:
 
 ```bash
 node dist/cli/main.js serve --http --port 8787
@@ -126,10 +122,10 @@ the bind address, port, subscription cap, and keep-alive interval under `http:` 
 unreachable through `-p`. Publish it on the host's loopback address:
 
 ```bash
-docker run -p 127.0.0.1:8787:8787 ai-counsel serve --http --host 0.0.0.0
+docker run -p 127.0.0.1:8787:8787 rostra serve --http --host 0.0.0.0
 ```
 
-`ai-counsel serve --stdio` is the explicit form of the default; bare `ai-counsel` still means
+`rostra serve --stdio` is the explicit form of the default; bare `rostra` still means
 stdio.
 
 Both transports keep the build identity captured at startup. Rebuilding or editing the
@@ -141,7 +137,7 @@ configuration underneath a running server makes the next dispatch fail with
 Submit a job with `start_deliberation`. Choose one committee mode:
 
 - `explicit`: supply all participants.
-- `adaptive`: supply committee size and routing limits. AI Counsel selects configured models from calibrated metrics.
+- `adaptive`: supply committee size and routing limits. Rostra selects configured models from calibrated metrics.
 
 The shipped protocols are:
 
@@ -169,8 +165,8 @@ A recovered job can enter `recovery_required` after an uncertain external attemp
 
 Every job is also readable as a resource. Clients do not have to poll a tool:
 
-- `counsel://deliberations/{job_id}` returns what `get_deliberation` returns.
-- `counsel://deliberations/{job_id}/events` returns the first 500 events and a `next_seq` cursor.
+- `rostra://deliberations/{job_id}` returns what `get_deliberation` returns.
+- `rostra://deliberations/{job_id}/events` returns the first 500 events and a `next_seq` cursor.
 
 Use `tail_deliberation` when you need a custom cursor, limit, or blocking wait.
 
@@ -188,7 +184,7 @@ event is sent as `notifications/progress`, keyed by the event sequence number.
 
 Each completed job publishes an immutable decision packet. The packet includes claims, evidence provenance, predictions, ballots, minority reports, and experiment proposals.
 
-Experiment proposals are inert records. AI Counsel does not run their commands.
+Experiment proposals are inert records. Rostra does not run their commands.
 
 Decision data is scoped to the canonical Git workspace. Use these MCP tools:
 
@@ -255,27 +251,27 @@ CLI model adapters run as unrestricted host processes. Their decision packets us
 Build the image:
 
 ```bash
-docker build -t ai-counsel .
+docker build -t rostra .
 ```
 
 Run the MCP server with a mounted configuration and data directory:
 
 ```bash
 docker run --rm -i \
-  -e AI_COUNSEL_CONFIG=/config/config.yaml \
+  -e ROSTRA_CONFIG=/config/config.yaml \
   -v "$PWD/config.yaml:/config/config.yaml:ro" \
-  -v ai-counsel-data:/home/node/.local/share/ai-counsel \
-  ai-counsel
+  -v rostra-data:/home/node/.local/share/rostra \
+  rostra
 ```
 
 Run the HTTP transport instead, published on the host's loopback address:
 
 ```bash
 docker run --rm -p 127.0.0.1:8787:8787 \
-  -e AI_COUNSEL_CONFIG=/config/config.yaml \
+  -e ROSTRA_CONFIG=/config/config.yaml \
   -v "$PWD/config.yaml:/config/config.yaml:ro" \
-  -v ai-counsel-data:/home/node/.local/share/ai-counsel \
-  ai-counsel serve --http --host 0.0.0.0
+  -v rostra-data:/home/node/.local/share/rostra \
+  rostra serve --http --host 0.0.0.0
 ```
 
 The container must bind `0.0.0.0` to be reachable through `-p`, which is why the published port

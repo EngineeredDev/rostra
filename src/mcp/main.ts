@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio, type StdioServerHandle } from "@modelcontextprotocol/server/stdio";
 import { errorMessage } from "../errors.js";
-import { JobEventWatcher, type CounselNotifier } from "../jobs/event-watcher.js";
+import { JobEventWatcher, type RostraNotifier } from "../jobs/event-watcher.js";
 import { deliberationUris } from "./projection.js";
 import { createRuntime } from "./runtime.js";
 import { createMcpServer } from "./server.js";
@@ -15,7 +15,7 @@ export async function runMcpServer(): Promise<StdioServerHandle> {
   // outbound intercept is what filters and stamps updates onto each open subscription.
   let pinned: McpServer | undefined;
   const handle = serveStdio(() => (pinned = createMcpServer(runtime)), { onerror: reportError });
-  const notifier: CounselNotifier = {
+  const notifier: RostraNotifier = {
     resourceUpdated: (uri) => {
       void pinned?.server.sendResourceUpdated({ uri }).catch(reportError);
     },

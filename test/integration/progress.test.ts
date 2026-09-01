@@ -47,9 +47,9 @@ const request = startDeliberationInputSchema.parse({
 });
 
 async function harness(): Promise<{ client: Client; store: JobStore }> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-progress-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-progress-"));
   roots.push(root);
-  const db = await openStorage(join(root, "ai-counsel.sqlite"));
+  const db = await openStorage(join(root, "rostra.sqlite"));
   const store = new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 5_000 });
   stores.push(store);
   const server = createMcpServer({

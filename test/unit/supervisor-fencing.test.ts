@@ -34,9 +34,9 @@ class FixedIdentityProvider implements ProcessIdentityProvider {
 
 describe("supervisor fencing", () => {
   it("does not kill active work from a mismatched executor", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-fence-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-fence-"));
     roots.push(root);
-    const databasePath = join(root, "ai-counsel.sqlite");
+    const databasePath = join(root, "rostra.sqlite");
     const db = await openStorage(databasePath);
     const config = configSchema.parse({
       version: 2,

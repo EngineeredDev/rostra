@@ -13,9 +13,9 @@ afterEach(async () => {
 });
 
 async function temporaryDatabase(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-storage-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-storage-"));
   roots.push(root);
-  return join(root, "ai-counsel.sqlite");
+  return join(root, "rostra.sqlite");
 }
 
 

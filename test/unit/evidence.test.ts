@@ -11,7 +11,7 @@ afterEach(async () => {
 });
 
 async function fixture(): Promise<{ root: string; outside: string }> {
-  const base = await mkdtemp(join(tmpdir(), "ai-counsel-evidence-"));
+  const base = await mkdtemp(join(tmpdir(), "rostra-evidence-"));
   roots.push(base);
   const root = join(base, "workspace");
   const outside = join(base, "outside.txt");

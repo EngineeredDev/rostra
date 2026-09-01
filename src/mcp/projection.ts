@@ -4,7 +4,7 @@ import { parseJsonValue, type JsonValue } from "../utils/canonical-json.js";
 
 export type JsonObject = Record<string, JsonValue>;
 
-export const DELIBERATION_URI_PREFIX = "counsel://deliberations/";
+export const DELIBERATION_URI_PREFIX = "rostra://deliberations/";
 
 /** The job resource and its event log: the pair a job change invalidates. */
 export function deliberationUris(jobId: string): readonly string[] {

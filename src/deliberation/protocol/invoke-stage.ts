@@ -50,7 +50,7 @@ async function invokeUntilResult(
       "The prior response requested one bounded evidence operation.",
       "Prior response:",
       rawText,
-      `AI_COUNSEL_TOOL_RESULT: ${canonicalJson(toolResult)}`,
+      `ROSTRA_TOOL_RESULT: ${canonicalJson(toolResult)}`,
       "Use this result. Request another allowed operation or return the final structured result.",
     ].join("\n\n");
     kind = "tool_continuation";
@@ -96,8 +96,8 @@ export async function invokeStructuredStage(
     "The prior result was rejected:",
     describeRejection(rejection),
     "Reuse the prior reasoning; change only the structure so it matches this shape exactly.",
-    `AI_COUNSEL_RESULT: ${stageResultExample(input.kind)}`,
-    "End with exactly one AI_COUNSEL_RESULT: {JSON} line.",
+    `ROSTRA_RESULT: ${stageResultExample(input.kind)}`,
+    "End with exactly one ROSTRA_RESULT: {JSON} line.",
     "Prior response:",
     first.rawText,
   ].join("\n\n");

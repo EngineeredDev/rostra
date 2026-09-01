@@ -13,9 +13,9 @@ afterEach(async () => {
 });
 
 async function createStore(): Promise<JobStore> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-jobs-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-jobs-"));
   roots.push(root);
-  return new JobStore(await openStorage(join(root, "ai-counsel.sqlite")), {
+  return new JobStore(await openStorage(join(root, "rostra.sqlite")), {
     dedupeSuccessMs: 10_000,
     leaseMs: 5_000,
   });

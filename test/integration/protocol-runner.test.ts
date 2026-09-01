@@ -29,9 +29,9 @@ const requestBodySchema = z.strictObject({
 
 describe("configured protocol runner", () => {
   it("runs participant stages concurrently and publishes a typed packet", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-runner-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-runner-"));
     roots.push(root);
-    const databasePath = join(root, "ai-counsel.sqlite");
+    const databasePath = join(root, "rostra.sqlite");
     await writeFile(join(root, "evidence.txt"), "verified evidence\n");
     const config = configSchema.parse({
       version: 2,
@@ -156,15 +156,15 @@ describe("configured protocol runner", () => {
       let content: string;
       if (prompt.includes("final_ballot")) {
         finalBallotPrompt = prompt;
-        content = `Ballot\nAI_COUNSEL_RESULT: {"option_id":"option-a","confidence":0.9,"rationale":"${body.model}","continue_debate":false}`;
+        content = `Ballot\nROSTRA_RESULT: {"option_id":"option-a","confidence":0.9,"rationale":"${body.model}","continue_debate":false}`;
       } else if (prompt.includes("evidence_collection")) {
         const evidenceId = /"evidence_id":"([^"]+)"/u.exec(prompt)?.[1];
         content = evidenceId === undefined
-          ? `AI_COUNSEL_TOOL_REQUEST: {"name":"read_file","arguments":{"path":"evidence.txt"},"claim_id":"${claimId}","polarity":"supports"}`
-          : `Evidence verified\nAI_COUNSEL_RESULT: {"claim_id":"${claimId}","evidence_requests":["read evidence.txt"],"evidence_ids":["${evidenceId}"],"assessment":"verified evidence"}`;
+          ? `ROSTRA_TOOL_REQUEST: {"name":"read_file","arguments":{"path":"evidence.txt"},"claim_id":"${claimId}","polarity":"supports"}`
+          : `Evidence verified\nROSTRA_RESULT: {"claim_id":"${claimId}","evidence_requests":["read evidence.txt"],"evidence_ids":["${evidenceId}"],"assessment":"verified evidence"}`;
       } else {
         const recommendation = body.model === "model-a" ? "option-a" : "option-b";
-        content = `Analysis\nAI_COUNSEL_RESULT: {"claims":[{"claim_id":"${claimId}","type":"fact","text":"verified ${body.model}","confidence":0.9}],"assumptions":["bounded"],"recommendation":"${recommendation}","confidence":0.9,"predictions":[]}`;
+        content = `Analysis\nROSTRA_RESULT: {"claims":[{"claim_id":"${claimId}","type":"fact","text":"verified ${body.model}","confidence":0.9}],"assumptions":["bounded"],"recommendation":"${recommendation}","confidence":0.9,"predictions":[]}`;
       }
       return Promise.resolve(new Response(JSON.stringify({
         choices: [{ message: { content } }],

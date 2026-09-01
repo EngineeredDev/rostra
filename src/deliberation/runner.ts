@@ -392,7 +392,7 @@ export class ConfiguredProtocolRunner implements StageRunner {
             stageId: stage.id,
             stageKind: stage.kind,
             participantId: "aggregate",
-            rawText: `AI_COUNSEL_RESULT: ${JSON.stringify(submission)}`,
+            rawText: `ROSTRA_RESULT: ${JSON.stringify(submission)}`,
             submission,
           });
           protocolState = reduceProtocol(protocolState, {

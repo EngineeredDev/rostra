@@ -19,7 +19,7 @@ import { PACKAGE_VERSION } from "../version.js";
 async function openJobStore(): Promise<JobStore> {
   const configPath = await resolveConfigPath();
   const config = await loadConfig(configPath);
-  const db = await openStorage(join(resolveDataHome(), "ai-counsel.sqlite"), {
+  const db = await openStorage(join(resolveDataHome(), "rostra.sqlite"), {
     busyTimeoutMs: config.storage.busy_timeout_ms,
   });
   return new JobStore(db, {
@@ -39,7 +39,7 @@ async function runJobs(args: readonly string[]): Promise<void> {
       process.stdout.write(`${JSON.stringify(store.requestCancellation(args[1]), null, 2)}\n`);
       return;
     }
-    throw new AppError("invalid_command", "Usage: ai-counsel jobs list|cancel <job-id>");
+    throw new AppError("invalid_command", "Usage: rostra jobs list|cancel <job-id>");
   } finally {
     store.close();
   }
@@ -47,7 +47,7 @@ async function runJobs(args: readonly string[]): Promise<void> {
 
 async function runDecision(args: readonly string[]): Promise<void> {
   if (args[0] !== "review") {
-    throw new AppError("invalid_command", "Usage: ai-counsel decision review [options]");
+    throw new AppError("invalid_command", "Usage: rostra decision review [options]");
   }
   const values: Record<string, string> = {};
   for (let index = 1; index < args.length; index += 2) {
@@ -74,7 +74,7 @@ async function runDecision(args: readonly string[]): Promise<void> {
   }
   const configPath = await resolveConfigPath();
   const config = await loadConfig(configPath);
-  const db = await openStorage(join(resolveDataHome(), "ai-counsel.sqlite"), {
+  const db = await openStorage(join(resolveDataHome(), "rostra.sqlite"), {
     busyTimeoutMs: config.storage.busy_timeout_ms,
   });
   try {
@@ -132,7 +132,7 @@ export function parseServeArgs(args: readonly string[]): ServeOptions {
   }
   const parsed = serveOptionsSchema.safeParse(values);
   if (!parsed.success) {
-    throw new AppError("invalid_command", "Usage: ai-counsel serve [--http|--stdio] [--host H] [--port N]");
+    throw new AppError("invalid_command", "Usage: rostra serve [--http|--stdio] [--host H] [--port N]");
   }
   return parsed.data;
 }
@@ -147,7 +147,7 @@ async function runServe(args: readonly string[]): Promise<void> {
     ...(options.host === undefined ? {} : { host: options.host }),
     ...(options.port === undefined ? {} : { port: options.port }),
   });
-  process.stdout.write(`ai-counsel listening on ${handle.url}\n`);
+  process.stdout.write(`rostra listening on ${handle.url}\n`);
 }
 
 export async function runCli(args: readonly string[]): Promise<void> {
@@ -157,7 +157,7 @@ export async function runCli(args: readonly string[]): Promise<void> {
   }
   if (args[0] === "init") {
     if (args.length !== 1) {
-      throw new AppError("invalid_command", "Usage: ai-counsel init");
+      throw new AppError("invalid_command", "Usage: rostra init");
     }
     const result = await initialize();
     const lines = [

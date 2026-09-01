@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { startDeliberationInputSchema, type JobStatus } from "../../src/contracts/tools.js";
-import { JobEventWatcher, type CounselNotifier } from "../../src/jobs/event-watcher.js";
+import { JobEventWatcher, type RostraNotifier } from "../../src/jobs/event-watcher.js";
 import { JobStore } from "../../src/jobs/store.js";
 import { openStorage } from "../../src/storage/database.js";
 
@@ -29,9 +29,9 @@ const request = startDeliberationInputSchema.parse({
 });
 
 async function createStore(): Promise<JobStore> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-watcher-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-watcher-"));
   roots.push(root);
-  const store = new JobStore(await openStorage(join(root, "ai-counsel.sqlite")), {
+  const store = new JobStore(await openStorage(join(root, "rostra.sqlite")), {
     dedupeSuccessMs: 10_000,
     leaseMs: 5_000,
   });
@@ -39,7 +39,7 @@ async function createStore(): Promise<JobStore> {
   return store;
 }
 
-function recorder(): { notifier: CounselNotifier; seen: string[] } {
+function recorder(): { notifier: RostraNotifier; seen: string[] } {
   const seen: string[] = [];
   return { notifier: { resourceUpdated: (uri) => seen.push(uri) }, seen };
 }
@@ -55,12 +55,12 @@ function advance(store: JobStore, jobId: string, nextStatus: JobStatus, eventTyp
   });
 }
 
-function watcherFor(store: JobStore, notifier: CounselNotifier): JobEventWatcher {
+function watcherFor(store: JobStore, notifier: RostraNotifier): JobEventWatcher {
   return new JobEventWatcher({
     store,
     notifier,
     intervalMs: 1_000,
-    urisForJob: (jobId) => [`counsel://deliberations/${jobId}`, `counsel://deliberations/${jobId}/events`],
+    urisForJob: (jobId) => [`rostra://deliberations/${jobId}`, `rostra://deliberations/${jobId}/events`],
   });
 }
 
@@ -73,8 +73,8 @@ describe("job event watcher", () => {
 
     watcher.tick();
     expect(seen).toEqual([
-      `counsel://deliberations/${submission.job_id}`,
-      `counsel://deliberations/${submission.job_id}/events`,
+      `rostra://deliberations/${submission.job_id}`,
+      `rostra://deliberations/${submission.job_id}/events`,
     ]);
 
     seen.length = 0;

@@ -16,13 +16,13 @@ interface ConfigPathOptions extends PathOptions {
 
 export function resolveUserConfigPath(options: PathOptions = {}): string {
   const env = options.env ?? process.env;
-  const explicit = env.AI_COUNSEL_CONFIG;
+  const explicit = env.ROSTRA_CONFIG;
   if (explicit !== undefined && explicit.trim() !== "") {
     return resolve(explicit);
   }
   return env.XDG_CONFIG_HOME === undefined
-    ? join(resolve(options.homeDir ?? homedir()), ".config", "ai-counsel", "config.yaml")
-    : join(resolve(env.XDG_CONFIG_HOME), "ai-counsel", "config.yaml");
+    ? join(resolve(options.homeDir ?? homedir()), ".config", "rostra", "config.yaml")
+    : join(resolve(env.XDG_CONFIG_HOME), "rostra", "config.yaml");
 }
 
 export function resolvePackagedConfigPath(options: ConfigPathOptions = {}): string {
@@ -43,8 +43,8 @@ async function readable(path: string): Promise<boolean> {
 export async function resolveConfigPath(options: ConfigPathOptions = {}): Promise<string> {
   const env = options.env ?? process.env;
   const home = options.homeDir ?? homedir();
-  const homeConfig = join(resolve(home), ".config", "ai-counsel", "config.yaml");
-  const explicit = env.AI_COUNSEL_CONFIG;
+  const homeConfig = join(resolve(home), ".config", "rostra", "config.yaml");
+  const explicit = env.ROSTRA_CONFIG;
   if (explicit !== undefined && explicit.trim() !== "") {
     const path = resolve(explicit);
     if (!(await readable(path))) {
@@ -63,17 +63,17 @@ export async function resolveConfigPath(options: ConfigPathOptions = {}): Promis
       return candidate;
     }
   }
-  throw new AppError("config_not_found", "No readable AI Counsel configuration was found");
+  throw new AppError("config_not_found", "No readable Rostra configuration was found");
 }
 
 export function resolveDataHome(options: PathOptions = {}): string {
   const env = options.env ?? process.env;
   const home = options.homeDir ?? homedir();
-  if (env.AI_COUNSEL_DATA_HOME !== undefined && env.AI_COUNSEL_DATA_HOME.trim() !== "") {
-    return resolve(env.AI_COUNSEL_DATA_HOME);
+  if (env.ROSTRA_DATA_HOME !== undefined && env.ROSTRA_DATA_HOME.trim() !== "") {
+    return resolve(env.ROSTRA_DATA_HOME);
   }
   if (env.XDG_DATA_HOME !== undefined && env.XDG_DATA_HOME.trim() !== "") {
-    return join(resolve(env.XDG_DATA_HOME), "ai-counsel");
+    return join(resolve(env.XDG_DATA_HOME), "rostra");
   }
-  return join(resolve(home), ".local", "share", "ai-counsel");
+  return join(resolve(home), ".local", "share", "rostra");
 }

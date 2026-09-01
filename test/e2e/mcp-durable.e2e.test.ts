@@ -48,7 +48,7 @@ afterEach(async () => {
 });
 
 async function fixture(): Promise<{ configPath: string; dataHome: string; env: Record<string, string> }> {
-  const root = await mkdtemp(join(tmpdir(), "ai-counsel-e2e-"));
+  const root = await mkdtemp(join(tmpdir(), "rostra-e2e-"));
   roots.push(root);
   const dataHome = join(root, "data");
   const configPath = join(root, "config.yaml");
@@ -79,15 +79,15 @@ decision_graph: {}
     configPath,
     dataHome,
     env: environment({
-      AI_COUNSEL_CONFIG: configPath,
-      AI_COUNSEL_DATA_HOME: dataHome,
-      AI_COUNSEL_WORKER_ENTRYPOINT: resolve("test/fixtures/fake-worker.mjs"),
+      ROSTRA_CONFIG: configPath,
+      ROSTRA_DATA_HOME: dataHome,
+      ROSTRA_WORKER_ENTRYPOINT: resolve("test/fixtures/fake-worker.mjs"),
     }),
   };
 }
 
 async function connect(env: Record<string, string>): Promise<Client> {
-  const client = new Client({ name: "ai-counsel-e2e", version: "1" });
+  const client = new Client({ name: "rostra-e2e", version: "1" });
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [resolve("dist/cli/main.js")],
@@ -178,7 +178,7 @@ describe("compiled durable MCP", () => {
     expect(cancelled.status).toBe("cancelled");
     await secondClient.close();
 
-    const databasePath = join(setup.dataHome, "ai-counsel.sqlite");
+    const databasePath = join(setup.dataHome, "rostra.sqlite");
     const db = new Database(databasePath, { readonly: true, fileMustExist: true });
     const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
     db.close();

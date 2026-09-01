@@ -1,27 +1,27 @@
 {
-  "name": "ai-counsel",
-  "version": "0.3.0-beta.1",
+  "name": "@engineereddev/rostra",
+  "version": "0.1.0-beta.1",
   "description": "Durable evidence-backed deliberation and Decision CI MCP server",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stoopkidddd/ai-counsel.git"
+    "url": "https://github.com/EngineeredDev/rostra.git"
   },
-  "homepage": "https://github.com/stoopkidddd/ai-counsel#readme",
+  "homepage": "https://github.com/EngineeredDev/rostra#readme",
   "bugs": {
-    "url": "https://github.com/stoopkidddd/ai-counsel/issues"
+    "url": "https://github.com/EngineeredDev/rostra/issues"
   },
   "keywords": ["mcp", "model-context-protocol", "deliberation", "decision-making"],
-  "mcpName": "io.github.stoopkidddd/ai-counsel",
+  "mcpName": "io.github.engineereddev/rostra",
   "type": "module",
   "engines": {
     "node": ">=24"
   },
   "packageManager": "pnpm@10.11.0",
   "bin": {
-    "ai-counsel": "dist/cli/main.js",
-    "ai-counsel-supervisor": "dist/jobs/supervisor-main.js",
-    "ai-counsel-worker": "dist/jobs/worker-main.js"
+    "rostra": "dist/cli/main.js",
+    "rostra-supervisor": "dist/jobs/supervisor-main.js",
+    "rostra-worker": "dist/jobs/worker-main.js"
   },
   "files": [
     "dist",

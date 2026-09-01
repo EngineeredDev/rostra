@@ -34,5 +34,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      - run: docker build -t ai-counsel:test .
-      - run: docker run --rm --user node ai-counsel:test jobs list
+      - run: docker build -t rostra:test .
+      - run: docker run --rm --user node rostra:test jobs list

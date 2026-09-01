@@ -12,7 +12,7 @@ afterEach(async () => {
 
 describe("first-run initialization", () => {
   it("creates the user files without replacing an existing configuration", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-init-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-init-"));
     roots.push(root);
     const homeDir = join(root, "home");
     const fetchedFor: string[] = [];
@@ -28,10 +28,10 @@ describe("first-run initialization", () => {
       fetchModel,
     });
     expect(first).toEqual({
-      configPath: join(homeDir, ".config", "ai-counsel", "config.yaml"),
+      configPath: join(homeDir, ".config", "rostra", "config.yaml"),
       configCreated: true,
-      dataHome: join(homeDir, ".local", "share", "ai-counsel"),
-      modelDirectory: join(homeDir, ".local", "share", "ai-counsel", "models", "minilm", "test"),
+      dataHome: join(homeDir, ".local", "share", "rostra"),
+      modelDirectory: join(homeDir, ".local", "share", "rostra", "models", "minilm", "test"),
     });
     expect((await stat(first.dataHome)).isDirectory()).toBe(true);
 

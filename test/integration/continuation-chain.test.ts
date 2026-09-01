@@ -121,9 +121,9 @@ function publish(input: {
 
 describe("decision continuation chains", () => {
   it("creates one workspace thread and queries the complete chain", async () => {
-    const root = await mkdtemp(join(tmpdir(), "ai-counsel-continuation-"));
+    const root = await mkdtemp(join(tmpdir(), "rostra-continuation-"));
     roots.push(root);
-    const db = await openStorage(join(root, "ai-counsel.sqlite"));
+    const db = await openStorage(join(root, "rostra.sqlite"));
     const store = new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 1_000 });
     const workspace = await deriveWorkspaceIdentity(root);
     const first = publish({
