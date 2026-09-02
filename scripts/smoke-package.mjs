@@ -26,14 +26,15 @@ if (
   throw new Error("package.json and server.json release metadata do not match");
 }
 const root = await mkdtemp(join(tmpdir(), "rostra-package-"));
+const commandSuffix = process.platform === "win32" ? ".cmd" : "";
 
 try {
-  execFileSync("pnpm", ["pack", "--pack-destination", root], { stdio: "inherit" });
+  execFileSync(`pnpm${commandSuffix}`, ["pack", "--pack-destination", root], { stdio: "inherit" });
   const archives = (await readdir(root)).filter((name) => name.endsWith(".tgz"));
   if (archives.length !== 1) throw new Error(`Expected one package archive, found ${archives.length}`);
   const archive = join(root, archives[0]);
   const installRoot = join(root, "install");
-  execFileSync("npm", ["install", "--prefix", installRoot, archive], { stdio: "inherit" });
+  execFileSync(`npm${commandSuffix}`, ["install", "--prefix", installRoot, archive], { stdio: "inherit" });
 
   const configPath = join(root, "config.yaml");
   const dataHome = join(root, "data");
