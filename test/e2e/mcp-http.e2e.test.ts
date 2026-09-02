@@ -37,13 +37,22 @@ async function reap(pids: readonly number[]): Promise<void> {
   }
 }
 
+function waitForExit(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolvePromise) => child.once("exit", () => resolvePromise()));
+}
+
 afterEach(async () => {
   const pids = [...supervisors];
   supervisors.clear();
-  for (const child of children) {
+  const spawned = [...children];
+  children.clear();
+  const exits = spawned.map((child) => waitForExit(child));
+  for (const child of spawned) {
     child.kill("SIGTERM");
   }
-  children.clear();
   for (const pid of pids) {
     try {
       process.kill(pid, "SIGTERM");
@@ -51,6 +60,7 @@ afterEach(async () => {
       continue;
     }
   }
+  await Promise.all(exits);
   await reap(pids);
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
