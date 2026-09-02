@@ -16,7 +16,9 @@ const objectSchema = z.record(z.string(), z.json());
 
 function environment(overrides: Record<string, string>): Record<string, string> {
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
   );
   return { ...inherited, ...overrides };
 }
@@ -62,12 +64,16 @@ afterEach(async () => {
   }
   await Promise.all(exits);
   await reap(pids);
-  await Promise.all(roots.splice(0).map((root) => rm(root, {
-    recursive: true,
-    force: true,
-    maxRetries: 50,
-    retryDelay: 100,
-  })));
+  await Promise.all(
+    roots.splice(0).map((root) =>
+      rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 50,
+        retryDelay: 100,
+      }),
+    ),
+  );
 });
 
 async function freePort(): Promise<number> {
@@ -84,7 +90,9 @@ async function serve(): Promise<{ endpoint: string; dataHome: string }> {
   roots.push(root);
   const dataHome = join(root, "data");
   const configPath = join(root, "config.yaml");
-  await writeFile(configPath, `
+  await writeFile(
+    configPath,
+    `
 version: 2
 adapters: {}
 model_registry: { models: [] }
@@ -106,7 +114,8 @@ jobs:
   wait_max_seconds: 10
 storage: { busy_timeout_ms: 1000 }
 decision_graph: {}
-`);
+`,
+  );
   const port = await freePort();
   const child = spawn(
     process.execPath,
@@ -123,7 +132,10 @@ decision_graph: {}
   );
   children.add(child);
   const endpoint = await new Promise<string>((resolvePromise, reject) => {
-    const timer = setTimeout(() => reject(new Error("serve --http did not report a listener")), 20_000);
+    const timer = setTimeout(
+      () => reject(new Error("serve --http did not report a listener")),
+      20_000,
+    );
     let buffered = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
@@ -166,29 +178,42 @@ describe("compiled MCP over Streamable HTTP", () => {
     const tools = await client.listTools();
     expect(tools.tools.map((tool) => tool.name).sort()).toEqual([...durableToolNames].sort());
 
-    const started = objectSchema.parse((await client.callTool({
-      name: "start_deliberation",
-      arguments: {
-        question: "http fake job",
-        working_directory: process.cwd(),
-        protocol: "quick",
-        committee: { mode: "explicit" },
-        participants,
-      },
-    })).structuredContent);
+    const started = objectSchema.parse(
+      (
+        await client.callTool({
+          name: "start_deliberation",
+          arguments: {
+            question: "http fake job",
+            working_directory: process.cwd(),
+            protocol: "quick",
+            committee: { mode: "explicit" },
+            participants,
+          },
+        })
+      ).structuredContent,
+    );
     expect(started).toHaveProperty("job_id");
     const jobId = z.uuid().parse(started.job_id);
 
-    const terminal = objectSchema.parse((await client.callTool({
-      name: "get_deliberation",
-      arguments: { job_id: jobId, wait_for_terminal: true, wait_timeout_seconds: 10 },
-    })).structuredContent);
+    const terminal = objectSchema.parse(
+      (
+        await client.callTool({
+          name: "get_deliberation",
+          arguments: { job_id: jobId, wait_for_terminal: true, wait_timeout_seconds: 10 },
+        })
+      ).structuredContent,
+    );
     expect(terminal).toMatchObject({ job_id: jobId, status: "succeeded" });
 
     await client.close();
 
-    const db = new Database(join(dataHome, "rostra.sqlite"), { readonly: true, fileMustExist: true });
-    const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
+    const db = new Database(join(dataHome, "rostra.sqlite"), {
+      readonly: true,
+      fileMustExist: true,
+    });
+    const state = db
+      .prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1")
+      .get();
     db.close();
     if (state !== undefined) supervisors.add(state.pid);
   });
@@ -198,10 +223,14 @@ describe("compiled MCP over Streamable HTTP", () => {
     const client = await connect(endpoint);
 
     await client.callTool({ name: "set_session_models", arguments: { models: {} } });
-    const listed = objectSchema.parse((await client.callTool({
-      name: "list_models",
-      arguments: {},
-    })).structuredContent);
+    const listed = objectSchema.parse(
+      (
+        await client.callTool({
+          name: "list_models",
+          arguments: {},
+        })
+      ).structuredContent,
+    );
     expect(listed).toMatchObject({ session_models: {} });
 
     await client.close();
@@ -212,16 +241,20 @@ describe("compiled MCP over Streamable HTTP", () => {
     const subscriber = await connect(endpoint, true);
     const bystander = await connect(endpoint, true);
 
-    const started = objectSchema.parse((await subscriber.callTool({
-      name: "start_deliberation",
-      arguments: {
-        question: "subscribed fake job",
-        working_directory: process.cwd(),
-        protocol: "quick",
-        committee: { mode: "explicit" },
-        participants,
-      },
-    })).structuredContent);
+    const started = objectSchema.parse(
+      (
+        await subscriber.callTool({
+          name: "start_deliberation",
+          arguments: {
+            question: "subscribed fake job",
+            working_directory: process.cwd(),
+            protocol: "quick",
+            committee: { mode: "explicit" },
+            participants,
+          },
+        })
+      ).structuredContent,
+    );
     expect(started).toHaveProperty("job_id");
     const jobId = z.uuid().parse(started.job_id);
     const jobUri = `rostra://deliberations/${jobId}`;
@@ -239,10 +272,14 @@ describe("compiled MCP over Streamable HTTP", () => {
       resourceSubscriptions: ["rostra://deliberations/00000000-0000-4000-8000-000000000000"],
     });
 
-    const terminal = objectSchema.parse((await subscriber.callTool({
-      name: "get_deliberation",
-      arguments: { job_id: jobId, wait_for_terminal: true, wait_timeout_seconds: 10 },
-    })).structuredContent);
+    const terminal = objectSchema.parse(
+      (
+        await subscriber.callTool({
+          name: "get_deliberation",
+          arguments: { job_id: jobId, wait_for_terminal: true, wait_timeout_seconds: 10 },
+        })
+      ).structuredContent,
+    );
     expect(terminal).toMatchObject({ job_id: jobId, status: "succeeded" });
     await new Promise<void>((resolvePromise) => setTimeout(resolvePromise, 200));
 
@@ -255,8 +292,13 @@ describe("compiled MCP over Streamable HTTP", () => {
     await subscriber.close();
     await bystander.close();
 
-    const db = new Database(join(dataHome, "rostra.sqlite"), { readonly: true, fileMustExist: true });
-    const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
+    const db = new Database(join(dataHome, "rostra.sqlite"), {
+      readonly: true,
+      fileMustExist: true,
+    });
+    const state = db
+      .prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1")
+      .get();
     db.close();
     if (state !== undefined) supervisors.add(state.pid);
   });

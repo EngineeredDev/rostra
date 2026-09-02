@@ -6,7 +6,6 @@ import { AppError, errorMessage } from "../errors.js";
 import { ProcessRunner, type ProcessRunInput, type ProcessRunResult } from "../process/runner.js";
 export { evidenceOperationNames } from "./operations.js";
 
-
 interface ProcessRunnerPort {
   run(input: ProcessRunInput): Promise<ProcessRunResult>;
 }
@@ -58,8 +57,9 @@ export class EvidenceWorkspace {
 
   private constructor(root: string, options: EvidenceWorkspaceOptions) {
     this.root = root;
-    this.#ignoredPaths = (options.ignoredPaths ?? [".git", "node_modules", "dist"])
-      .map((path) => portableRelative(path).replace(/^\.\//, "").replace(/\/$/, ""));
+    this.#ignoredPaths = (options.ignoredPaths ?? [".git", "node_modules", "dist"]).map((path) =>
+      portableRelative(path).replace(/^\.\//, "").replace(/\/$/, ""),
+    );
     this.#maxBytes = options.maxBytes ?? 1_048_576;
     this.#maxResults = options.maxResults ?? 100;
     this.#timeoutMs = options.timeoutMs ?? 10_000;
@@ -220,7 +220,10 @@ export class EvidenceWorkspace {
         if (metadata.isDirectory()) {
           const canonical = await realpath(path);
           if (!this.#inside(canonical)) {
-            throw new AppError("evidence_path_escape", `Directory escapes workspace: ${relativePath}`);
+            throw new AppError(
+              "evidence_path_escape",
+              `Directory escapes workspace: ${relativePath}`,
+            );
           }
           directories.push(path);
         } else if (metadata.isFile()) {
@@ -252,7 +255,10 @@ export class EvidenceWorkspace {
       try {
         evidence = await this.readFile(path);
       } catch (error) {
-        if (error instanceof AppError && (error.code === "binary_file" || error.code === "evidence_too_large")) {
+        if (
+          error instanceof AppError &&
+          (error.code === "binary_file" || error.code === "evidence_too_large")
+        ) {
           continue;
         }
         throw error;

@@ -9,7 +9,16 @@ adapters:
   codex:
     kind: cli
     command: codex
-    args: ["exec", "--skip-git-repo-check", "--model", "{model}", "-c", "model_reasoning_effort=\"{reasoning_effort}\"", "{prompt}"]
+    args:
+      [
+        "exec",
+        "--skip-git-repo-check",
+        "--model",
+        "{model}",
+        "-c",
+        'model_reasoning_effort="{reasoning_effort}"',
+        "{prompt}",
+      ]
     family: openai
   droid:
     kind: cli
@@ -29,7 +38,16 @@ adapters:
   omp:
     kind: cli
     command: omp
-    args: ["-p", "--no-session", "--auto-approve", "--model", "{model}", "--thinking={reasoning_effort}", "{prompt}"]
+    args:
+      [
+        "-p",
+        "--no-session",
+        "--auto-approve",
+        "--model",
+        "{model}",
+        "--thinking={reasoning_effort}",
+        "{prompt}",
+      ]
     timeout_seconds: 600
     family: omp
   ollama:
@@ -93,38 +111,88 @@ defaults:
 protocols:
   quick:
     stages:
-      - { id: analysis, kind: independent_analysis, visibility: question_only, minimum_completions: 2 }
-      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+      - {
+          id: analysis,
+          kind: independent_analysis,
+          visibility: question_only,
+          minimum_completions: 2,
+        }
+      - {
+          id: ballot,
+          kind: final_ballot,
+          stopping_policy: qualified_decision,
+          minimum_completions: 2,
+        }
   conference:
     stages:
-      - { id: analysis, kind: independent_analysis, visibility: question_only, minimum_completions: 2 }
+      - {
+          id: analysis,
+          kind: independent_analysis,
+          visibility: question_only,
+          minimum_completions: 2,
+        }
       - { id: critique, kind: critique, minimum_completions: 2 }
       - { id: revision, kind: revision, minimum_completions: 2 }
-      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+      - {
+          id: ballot,
+          kind: final_ballot,
+          stopping_policy: qualified_decision,
+          minimum_completions: 2,
+        }
   red_team:
     stages:
       - { id: proposal, kind: proposal, visibility: question_only, minimum_completions: 2 }
       - { id: attack, kind: adversarial_attack, minimum_completions: 2 }
       - { id: defense, kind: defense, minimum_completions: 2 }
-      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+      - {
+          id: ballot,
+          kind: final_ballot,
+          stopping_policy: qualified_decision,
+          minimum_completions: 2,
+        }
   delphi:
     stages:
-      - { id: analysis, kind: independent_analysis, visibility: question_only, minimum_completions: 2 }
+      - {
+          id: analysis,
+          kind: independent_analysis,
+          visibility: question_only,
+          minimum_completions: 2,
+        }
       - { id: aggregate, kind: anonymous_aggregate }
       - { id: revision, kind: revision, minimum_completions: 2 }
-      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+      - {
+          id: ballot,
+          kind: final_ballot,
+          stopping_policy: qualified_decision,
+          minimum_completions: 2,
+        }
   premortem:
     stages:
       - { id: premortem, kind: premortem, visibility: question_only, minimum_completions: 2 }
       - { id: revision, kind: revision, minimum_completions: 2 }
-      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+      - {
+          id: ballot,
+          kind: final_ballot,
+          stopping_policy: qualified_decision,
+          minimum_completions: 2,
+        }
   evidence_tribunal:
     stages:
       - { id: proposal, kind: proposal, visibility: question_only, minimum_completions: 2 }
-      - { id: evidence, kind: evidence_collection, allowed_capabilities: [read_file, search_files, list_files, get_file_tree, git_status, git_diff] }
+      - {
+          id: evidence,
+          kind: evidence_collection,
+          allowed_capabilities:
+            [read_file, search_files, list_files, get_file_tree, git_status, git_diff],
+        }
       - { id: examination, kind: cross_examination, minimum_completions: 2 }
       - { id: adjudication, kind: adjudication, minimum_completions: 2 }
-      - { id: ballot, kind: final_ballot, stopping_policy: qualified_decision, minimum_completions: 2 }
+      - {
+          id: ballot,
+          kind: final_ballot,
+          stopping_policy: qualified_decision,
+          minimum_completions: 2,
+        }
 
 similarity:
   provider: local_minilm

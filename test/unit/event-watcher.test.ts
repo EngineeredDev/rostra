@@ -60,7 +60,10 @@ function watcherFor(store: JobStore, notifier: RostraNotifier): JobEventWatcher 
     store,
     notifier,
     intervalMs: 1_000,
-    urisForJob: (jobId) => [`rostra://deliberations/${jobId}`, `rostra://deliberations/${jobId}/events`],
+    urisForJob: (jobId) => [
+      `rostra://deliberations/${jobId}`,
+      `rostra://deliberations/${jobId}/events`,
+    ],
   });
 }
 

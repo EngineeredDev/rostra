@@ -95,8 +95,12 @@ describe("progress notifications", () => {
         },
       },
     );
-    setTimeout(() => { advance(store, submission.job_id, "running", "worker_started"); }, 30);
-    setTimeout(() => { advance(store, submission.job_id, "succeeded", "job_succeeded"); }, 90);
+    setTimeout(() => {
+      advance(store, submission.job_id, "running", "worker_started");
+    }, 30);
+    setTimeout(() => {
+      advance(store, submission.job_id, "succeeded", "job_succeeded");
+    }, 90);
     const result = await call;
 
     expect(result.structuredContent).toMatchObject({
@@ -121,8 +125,12 @@ describe("progress notifications", () => {
       name: "get_deliberation",
       arguments: { job_id: submission.job_id, wait_for_terminal: true },
     });
-    setTimeout(() => { advance(store, submission.job_id, "running", "worker_started"); }, 30);
-    setTimeout(() => { advance(store, submission.job_id, "succeeded", "job_succeeded"); }, 90);
+    setTimeout(() => {
+      advance(store, submission.job_id, "running", "worker_started");
+    }, 30);
+    setTimeout(() => {
+      advance(store, submission.job_id, "succeeded", "job_succeeded");
+    }, 90);
     await call;
 
     expect(notifications).toEqual([]);
@@ -147,7 +155,9 @@ describe("progress notifications", () => {
         },
       },
     );
-    setTimeout(() => { advance(store, submission.job_id, "running", "worker_started"); }, 30);
+    setTimeout(() => {
+      advance(store, submission.job_id, "running", "worker_started");
+    }, 30);
     const result = await call;
 
     expect(result.structuredContent).toMatchObject({

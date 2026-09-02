@@ -12,7 +12,10 @@ const readmeVersions = [
     /@engineereddev\/rostra@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g,
   ),
 ].map((match) => match[1]);
-if (readmeVersions.length === 0 || readmeVersions.some((version) => version !== packageValue.version)) {
+if (
+  readmeVersions.length === 0 ||
+  readmeVersions.some((version) => version !== packageValue.version)
+) {
   throw new Error("README.md package versions do not match package.json");
 }
 const npmPackage = serverValue.packages.find((value) => value.registryType === "npm");
@@ -40,7 +43,8 @@ function runPackageManager(command, args) {
 try {
   runPackageManager("pnpm", ["pack", "--pack-destination", root]);
   const archives = (await readdir(root)).filter((name) => name.endsWith(".tgz"));
-  if (archives.length !== 1) throw new Error(`Expected one package archive, found ${archives.length}`);
+  if (archives.length !== 1)
+    throw new Error(`Expected one package archive, found ${archives.length}`);
   const archive = join(root, archives[0]);
   const installRoot = join(root, "install");
   runPackageManager("npm", ["install", "--prefix", installRoot, archive]);
@@ -48,7 +52,9 @@ try {
   const configPath = join(root, "config.yaml");
   const dataHome = join(root, "data");
   await mkdir(dataHome, { recursive: true });
-  await writeFile(configPath, `
+  await writeFile(
+    configPath,
+    `
 version: 2
 adapters: {}
 model_registry: { models: [] }
@@ -66,7 +72,8 @@ execution: { allow_host_tools: false }
 jobs: {}
 storage: {}
 decision_graph: {}
-`);
+`,
+  );
 
   const cliShim = join(installRoot, "node_modules", ".bin", "rostra");
   const cliEntrypoint = join(
@@ -82,10 +89,11 @@ decision_graph: {}
     ROSTRA_CONFIG: configPath,
     ROSTRA_DATA_HOME: dataHome,
   };
-  const runCli = (args) => execFileSync(cliCommand, [...cliPrefix, ...args], {
-    encoding: "utf8",
-    env,
-  });
+  const runCli = (args) =>
+    execFileSync(cliCommand, [...cliPrefix, ...args], {
+      encoding: "utf8",
+      env,
+    });
   const initOutput = runCli(["init"]);
   if (!initOutput.includes(`Kept existing configuration: ${configPath}`)) {
     throw new Error(`Unexpected init output: ${initOutput}`);

@@ -33,17 +33,110 @@ const commonCliEnvironment = [
 ] as const;
 
 const descriptorList: readonly AdapterDescriptor[] = [
-  { name: "claude", transport: "cli", providerFamily: "anthropic", supportedReasoningEfforts: ["low", "medium", "high"], capabilities: ["analysis", "code", "evidence"], environmentAllowlist: commonCliEnvironment, configSchema: cliAdapterConfigSchema },
-  { name: "codex", transport: "cli", providerFamily: "openai", supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"], capabilities: ["analysis", "code", "evidence"], environmentAllowlist: commonCliEnvironment, configSchema: cliAdapterConfigSchema },
-  { name: "droid", transport: "cli", providerFamily: "factory", supportedReasoningEfforts: ["off", "none", "low", "medium", "high"], capabilities: ["analysis", "code", "evidence"], environmentAllowlist: commonCliEnvironment, configSchema: cliAdapterConfigSchema },
-  { name: "gemini", transport: "cli", providerFamily: "google", supportedReasoningEfforts: [], capabilities: ["analysis", "code", "evidence"], environmentAllowlist: commonCliEnvironment, configSchema: cliAdapterConfigSchema },
-  { name: "llamacpp", transport: "cli", providerFamily: "local", supportedReasoningEfforts: [], capabilities: ["analysis"], environmentAllowlist: commonCliEnvironment, configSchema: cliAdapterConfigSchema },
-  { name: "omp", transport: "cli", providerFamily: "omp", supportedReasoningEfforts: ["off", "minimal", "low", "medium", "high"], capabilities: ["analysis", "code", "evidence"], environmentAllowlist: commonCliEnvironment, configSchema: cliAdapterConfigSchema },
-  { name: "ollama", transport: "http", providerFamily: "local", supportedReasoningEfforts: [], capabilities: ["analysis"], environmentAllowlist: [], configSchema: httpAdapterConfigSchema, httpStyle: "ollama" },
-  { name: "lmstudio", transport: "http", providerFamily: "local", supportedReasoningEfforts: [], capabilities: ["analysis"], environmentAllowlist: [], configSchema: httpAdapterConfigSchema, httpStyle: "openai" },
-  { name: "openrouter", transport: "http", providerFamily: "openrouter", supportedReasoningEfforts: [], capabilities: ["analysis"], environmentAllowlist: [], configSchema: httpAdapterConfigSchema, httpStyle: "openai" },
-  { name: "nebius", transport: "http", providerFamily: "nebius", supportedReasoningEfforts: [], capabilities: ["analysis"], environmentAllowlist: [], configSchema: httpAdapterConfigSchema, httpStyle: "openai" },
-  { name: "openai", transport: "http", providerFamily: "openai", supportedReasoningEfforts: ["low", "medium", "high"], capabilities: ["analysis"], environmentAllowlist: [], configSchema: httpAdapterConfigSchema, httpStyle: "openai" },
+  {
+    name: "claude",
+    transport: "cli",
+    providerFamily: "anthropic",
+    supportedReasoningEfforts: ["low", "medium", "high"],
+    capabilities: ["analysis", "code", "evidence"],
+    environmentAllowlist: commonCliEnvironment,
+    configSchema: cliAdapterConfigSchema,
+  },
+  {
+    name: "codex",
+    transport: "cli",
+    providerFamily: "openai",
+    supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    capabilities: ["analysis", "code", "evidence"],
+    environmentAllowlist: commonCliEnvironment,
+    configSchema: cliAdapterConfigSchema,
+  },
+  {
+    name: "droid",
+    transport: "cli",
+    providerFamily: "factory",
+    supportedReasoningEfforts: ["off", "none", "low", "medium", "high"],
+    capabilities: ["analysis", "code", "evidence"],
+    environmentAllowlist: commonCliEnvironment,
+    configSchema: cliAdapterConfigSchema,
+  },
+  {
+    name: "gemini",
+    transport: "cli",
+    providerFamily: "google",
+    supportedReasoningEfforts: [],
+    capabilities: ["analysis", "code", "evidence"],
+    environmentAllowlist: commonCliEnvironment,
+    configSchema: cliAdapterConfigSchema,
+  },
+  {
+    name: "llamacpp",
+    transport: "cli",
+    providerFamily: "local",
+    supportedReasoningEfforts: [],
+    capabilities: ["analysis"],
+    environmentAllowlist: commonCliEnvironment,
+    configSchema: cliAdapterConfigSchema,
+  },
+  {
+    name: "omp",
+    transport: "cli",
+    providerFamily: "omp",
+    supportedReasoningEfforts: ["off", "minimal", "low", "medium", "high"],
+    capabilities: ["analysis", "code", "evidence"],
+    environmentAllowlist: commonCliEnvironment,
+    configSchema: cliAdapterConfigSchema,
+  },
+  {
+    name: "ollama",
+    transport: "http",
+    providerFamily: "local",
+    supportedReasoningEfforts: [],
+    capabilities: ["analysis"],
+    environmentAllowlist: [],
+    configSchema: httpAdapterConfigSchema,
+    httpStyle: "ollama",
+  },
+  {
+    name: "lmstudio",
+    transport: "http",
+    providerFamily: "local",
+    supportedReasoningEfforts: [],
+    capabilities: ["analysis"],
+    environmentAllowlist: [],
+    configSchema: httpAdapterConfigSchema,
+    httpStyle: "openai",
+  },
+  {
+    name: "openrouter",
+    transport: "http",
+    providerFamily: "openrouter",
+    supportedReasoningEfforts: [],
+    capabilities: ["analysis"],
+    environmentAllowlist: [],
+    configSchema: httpAdapterConfigSchema,
+    httpStyle: "openai",
+  },
+  {
+    name: "nebius",
+    transport: "http",
+    providerFamily: "nebius",
+    supportedReasoningEfforts: [],
+    capabilities: ["analysis"],
+    environmentAllowlist: [],
+    configSchema: httpAdapterConfigSchema,
+    httpStyle: "openai",
+  },
+  {
+    name: "openai",
+    transport: "http",
+    providerFamily: "openai",
+    supportedReasoningEfforts: ["low", "medium", "high"],
+    capabilities: ["analysis"],
+    environmentAllowlist: [],
+    configSchema: httpAdapterConfigSchema,
+    httpStyle: "openai",
+  },
 ];
 
 const descriptors: Record<string, AdapterDescriptor> = Object.fromEntries(
@@ -103,7 +196,6 @@ export function validateAdapterConfigurations(
   }
   return validated;
 }
-
 
 export class AdapterRegistry {
   readonly #configurations: Record<string, AdapterConfig>;
@@ -239,15 +331,15 @@ export class AdapterRegistry {
       }
       headers.Authorization = `Bearer ${secret}`;
     }
-    const body = descriptor.httpStyle === "ollama"
-      ? { model: input.model, prompt: input.prompt, stream: false }
-      : { model: input.model, messages: [{ role: "user", content: input.prompt }] };
+    const body =
+      descriptor.httpStyle === "ollama"
+        ? { model: input.model, prompt: input.prompt, stream: false }
+        : { model: input.model, messages: [{ role: "user", content: input.prompt }] };
     let lastError: unknown;
     for (let attempt = 0; attempt <= configuration.max_retries; attempt += 1) {
       const timeoutSignal = AbortSignal.timeout(configuration.timeout_seconds * 1_000);
-      const signal = input.signal === undefined
-        ? timeoutSignal
-        : AbortSignal.any([input.signal, timeoutSignal]);
+      const signal =
+        input.signal === undefined ? timeoutSignal : AbortSignal.any([input.signal, timeoutSignal]);
       try {
         const response = await this.#fetch(endpoint, {
           method: "POST",
@@ -256,7 +348,10 @@ export class AdapterRegistry {
           signal,
         });
         if (!response.ok) {
-          if ((response.status === 429 || response.status >= 500) && attempt < configuration.max_retries) {
+          if (
+            (response.status === 429 || response.status >= 500) &&
+            attempt < configuration.max_retries
+          ) {
             continue;
           }
           throw new AppError("adapter_http_error", `${input.adapter} HTTP ${response.status}`);
@@ -265,19 +360,29 @@ export class AdapterRegistry {
         let text: string;
         try {
           const value: unknown = JSON.parse(raw);
-          const parsed = descriptor.httpStyle === "ollama"
-            ? z.object({ response: z.string() }).parse(value).response
-            : z.object({
-                choices: z.array(z.object({
-                  message: z.object({ content: z.string() }),
-                })).min(1),
-              }).parse(value).choices[0]?.message.content;
+          const parsed =
+            descriptor.httpStyle === "ollama"
+              ? z.object({ response: z.string() }).parse(value).response
+              : z
+                  .object({
+                    choices: z
+                      .array(
+                        z.object({
+                          message: z.object({ content: z.string() }),
+                        }),
+                      )
+                      .min(1),
+                  })
+                  .parse(value).choices[0]?.message.content;
           if (parsed === undefined) {
             throw new Error("missing content");
           }
           text = parsed;
         } catch {
-          throw new AppError("adapter_response_invalid", `${input.adapter} returned invalid content`);
+          throw new AppError(
+            "adapter_response_invalid",
+            `${input.adapter} returned invalid content`,
+          );
         }
         return {
           text,

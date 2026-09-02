@@ -60,11 +60,7 @@ export async function runWorker(options: WorkerOptions): Promise<JobSnapshot | u
   let running: JobSnapshot | undefined;
 
   try {
-    running = store.handshakeWorker(
-      options.jobId,
-      options.dispatchToken,
-      options.expectedVersion,
-    );
+    running = store.handshakeWorker(options.jobId, options.dispatchToken, options.expectedVersion);
     heartbeat = setInterval(() => {
       try {
         const current = store.get(options.jobId);
@@ -73,11 +69,7 @@ export async function runWorker(options: WorkerOptions): Promise<JobSnapshot | u
           return;
         }
         if (current.status === "running") {
-          running = store.heartbeat(
-            current.job_id,
-            current.lease_token,
-            current.row_version,
-          );
+          running = store.heartbeat(current.job_id, current.lease_token, current.row_version);
         }
       } catch {
         context.cancel("Worker lease was lost");

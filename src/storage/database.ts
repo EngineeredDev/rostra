@@ -39,7 +39,10 @@ export async function openStorage(
     initialize = (await stat(path)).size === 0;
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
-      throw new AppError("storage_unavailable", `Cannot inspect database ${path}: ${errorMessage(error)}`);
+      throw new AppError(
+        "storage_unavailable",
+        `Cannot inspect database ${path}: ${errorMessage(error)}`,
+      );
     }
     initialize = true;
   }

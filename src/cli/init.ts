@@ -23,7 +23,6 @@ export interface InitializeResult {
   modelDirectory?: string;
 }
 
-
 export async function initialize(options: InitializeOptions = {}): Promise<InitializeResult> {
   const pathOptions = {
     ...(options.env === undefined ? {} : { env: options.env }),

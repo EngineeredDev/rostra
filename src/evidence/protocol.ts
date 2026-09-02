@@ -31,10 +31,12 @@ export interface EvidenceToolResult {
 
 export function extractEvidenceToolRequest(rawText: string): EvidenceToolRequest | undefined {
   const marker = "ROSTRA_TOOL_REQUEST:";
-  const lines = rawText.split(/\r?\n/u)
-    .filter((line) => line.trimStart().startsWith(marker));
+  const lines = rawText.split(/\r?\n/u).filter((line) => line.trimStart().startsWith(marker));
   if (lines.length > 1 || (lines.length === 1 && rawText.includes("ROSTRA_RESULT:"))) {
-    throw new AppError("invalid_evidence_request", "A response must contain one tool request or one final result");
+    throw new AppError(
+      "invalid_evidence_request",
+      "A response must contain one tool request or one final result",
+    );
   }
   const last = lines.at(-1);
   if (last === undefined) return undefined;
@@ -82,10 +84,7 @@ export async function executeEvidenceTool(input: {
   createId?: () => string;
 }): Promise<EvidenceToolResult> {
   if (!input.allowedCapabilities.has(input.request.name)) {
-    throw new AppError(
-      "evidence_capability_denied",
-      `Stage does not allow ${input.request.name}`,
-    );
+    throw new AppError("evidence_capability_denied", `Stage does not allow ${input.request.name}`);
   }
   const nowMs = input.nowMs ?? Date.now();
   const createId = input.createId ?? randomUUID;
@@ -116,25 +115,35 @@ export async function executeEvidenceTool(input: {
   if (input.request.name === "search_files") {
     const { query } = searchArgumentsSchema.parse(input.request.arguments);
     return {
-      response: parseJsonValue({ name: input.request.name, ...(await input.workspace.searchFiles(query)) }),
+      response: parseJsonValue({
+        name: input.request.name,
+        ...(await input.workspace.searchFiles(query)),
+      }),
     };
   }
   if (input.request.name === "list_files") {
     emptyArgumentsSchema.parse(input.request.arguments);
     return {
-      response: parseJsonValue({ name: input.request.name, files: await input.workspace.listFiles() }),
+      response: parseJsonValue({
+        name: input.request.name,
+        files: await input.workspace.listFiles(),
+      }),
     };
   }
   if (input.request.name === "get_file_tree") {
     emptyArgumentsSchema.parse(input.request.arguments);
     return {
-      response: parseJsonValue({ name: input.request.name, ...(await input.workspace.getFileTree()) }),
+      response: parseJsonValue({
+        name: input.request.name,
+        ...(await input.workspace.getFileTree()),
+      }),
     };
   }
   emptyArgumentsSchema.parse(input.request.arguments);
-  const content = input.request.name === "git_status"
-    ? await input.workspace.gitStatus()
-    : await input.workspace.gitDiff();
+  const content =
+    input.request.name === "git_status"
+      ? await input.workspace.gitStatus()
+      : await input.workspace.gitDiff();
   const evidence = record({
     request: input.request,
     sourceType: "git",

@@ -63,7 +63,10 @@ function projectRecord(
       optionId = undefined;
       failureReason = "invalid_vote";
     }
-    if (optionId !== undefined && (ballot.rationale === undefined || ballot.rationale.trim() === "")) {
+    if (
+      optionId !== undefined &&
+      (ballot.rationale === undefined || ballot.rationale.trim() === "")
+    ) {
       optionId = undefined;
       failureReason = "missing_rationale";
     }
@@ -84,9 +87,10 @@ export function projectFinalBallots(input: ProjectionInput): BallotProjection {
   if (new Set(input.participantIds).size !== input.participantIds.length) {
     throw new AppError("duplicate_participant", "Ballot participants must be unique");
   }
-  const configuredIds = input.decisionOptions === undefined
-    ? undefined
-    : new Set(input.decisionOptions.map((option) => option.id));
+  const configuredIds =
+    input.decisionOptions === undefined
+      ? undefined
+      : new Set(input.decisionOptions.map((option) => option.id));
   const ballotHistory = input.stages.flatMap((stage) =>
     stage.ballots.map((ballot) => projectRecord(stage.stageId, ballot, configuredIds)),
   );
@@ -109,13 +113,14 @@ export function projectFinalBallots(input: ProjectionInput): BallotProjection {
     }
   }
 
-  const finalRecords = input.participantIds.map((participantId) =>
-    finalByParticipant.get(participantId) ?? {
-      participant_id: participantId,
-      stage_id: finalStage?.stageId ?? "none",
-      valid: false,
-      failure_reason: "missing_final_ballot",
-    },
+  const finalRecords = input.participantIds.map(
+    (participantId) =>
+      finalByParticipant.get(participantId) ?? {
+        participant_id: participantId,
+        stage_id: finalStage?.stageId ?? "none",
+        valid: false,
+        failure_reason: "missing_final_ballot",
+      },
   );
   const validRecords = finalRecords.filter(
     (record): record is BallotRecord & { option_id: string } =>
@@ -127,8 +132,8 @@ export function projectFinalBallots(input: ProjectionInput): BallotProjection {
   }
   const participantCount = input.participantIds.length;
   const quorumRequired = Math.ceil((2 * participantCount) / 3);
-  const leaders = Object.entries(tally).sort((left, right) =>
-    right[1] - left[1] || left[0].localeCompare(right[0]),
+  const leaders = Object.entries(tally).sort(
+    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
   );
   const maximumVotes = leaders[0]?.[1] ?? 0;
   const tiedLeaders = leaders.filter((entry) => entry[1] === maximumVotes);

@@ -12,11 +12,13 @@ interface ArtifactRow {
 }
 
 export async function reconcileMissingTranscripts(db: StorageDatabase): Promise<number> {
-  const rows = db.prepare<[], ArtifactRow>(`
+  const rows = db
+    .prepare<[], ArtifactRow>(`
     SELECT result_json, transcript_path FROM jobs
     WHERE status = 'succeeded' AND result_json IS NOT NULL AND transcript_path IS NOT NULL
     ORDER BY created_at_ms, job_id
-  `).all();
+  `)
+    .all();
   let restored = 0;
   for (const row of rows) {
     try {

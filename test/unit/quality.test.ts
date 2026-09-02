@@ -17,8 +17,9 @@ describe("calibrated model quality", () => {
     const root = await mkdtemp(join(tmpdir(), "rostra-quality-"));
     roots.push(root);
     const db = await openStorage(join(root, "rostra.sqlite"));
-    db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES ('w', ?, 1)")
-      .run(root);
+    db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES ('w', ?, 1)").run(
+      root,
+    );
     db.prepare(`
       INSERT INTO decisions(
         id, workspace_id, question, protocol, result_status, outcome_status,
@@ -50,13 +51,17 @@ describe("calibrated model quality", () => {
     const model = configSchema.parse({
       version: 2,
       adapters: { openai: { kind: "http", base_url: "https://example.test", family: "openai" } },
-      model_registry: { models: [{
-        id: "model-a",
-        adapter: "openai",
-        capabilities: ["analysis"],
-        provider_family: "openai",
-        default_latency_ms: 100,
-      }] },
+      model_registry: {
+        models: [
+          {
+            id: "model-a",
+            adapter: "openai",
+            capabilities: ["analysis"],
+            provider_family: "openai",
+            default_latency_ms: 100,
+          },
+        ],
+      },
       defaults: { protocol: "quick" },
       protocols: {},
       similarity: { provider: "local_minilm" },
@@ -66,15 +71,17 @@ describe("calibrated model quality", () => {
       decision_graph: {},
     }).model_registry.models[0];
     if (model === undefined) throw new Error("Expected model");
-    expect(loadRoutingMetrics(db, "w", [model], "general")).toEqual([{
-      adapter: "openai",
-      model: "model-a",
-      attempts: 8,
-      validAttempts: 7,
-      resolvedPredictions: 100,
-      brierSum: 0,
-      p75LatencyMs: 30,
-    }]);
+    expect(loadRoutingMetrics(db, "w", [model], "general")).toEqual([
+      {
+        adapter: "openai",
+        model: "model-a",
+        attempts: 8,
+        validAttempts: 7,
+        resolvedPredictions: 100,
+        brierSum: 0,
+        p75LatencyMs: 30,
+      },
+    ]);
     db.close();
   });
 });

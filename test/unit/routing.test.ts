@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { experimentProposalSchema, stageSubmissionSchemas } from "../../src/contracts/submissions.js";
+import {
+  experimentProposalSchema,
+  stageSubmissionSchemas,
+} from "../../src/contracts/submissions.js";
 import { shippedPresets } from "../../src/deliberation/protocol/presets.js";
 import { selectAdaptiveCommittee } from "../../src/models/routing.js";
 
@@ -45,16 +48,26 @@ const models = [
 
 describe("declarative protocol presets", () => {
   it("ships exact deterministic stage sequences with complete output mappings", () => {
-    expect(Object.fromEntries(Object.entries(shippedPresets).map(([name, preset]) => [
-      name,
-      preset.map((stage) => stage.kind),
-    ]))).toEqual({
+    expect(
+      Object.fromEntries(
+        Object.entries(shippedPresets).map(([name, preset]) => [
+          name,
+          preset.map((stage) => stage.kind),
+        ]),
+      ),
+    ).toEqual({
       quick: ["independent_analysis", "final_ballot"],
       conference: ["independent_analysis", "critique", "revision", "final_ballot"],
       red_team: ["proposal", "adversarial_attack", "defense", "final_ballot"],
       delphi: ["independent_analysis", "anonymous_aggregate", "revision", "final_ballot"],
       premortem: ["premortem", "revision", "final_ballot"],
-      evidence_tribunal: ["proposal", "evidence_collection", "cross_examination", "adjudication", "final_ballot"],
+      evidence_tribunal: [
+        "proposal",
+        "evidence_collection",
+        "cross_examination",
+        "adjudication",
+        "final_ballot",
+      ],
     });
     for (const preset of Object.values(shippedPresets)) {
       for (const stage of preset) {
@@ -64,16 +77,18 @@ describe("declarative protocol presets", () => {
   });
 
   it("keeps experiment commands as inert typed text", () => {
-    expect(experimentProposalSchema.parse({
-      hypothesis: "A test separates the options.",
-      discriminating_metric: "latency",
-      setup: "Use a fixture.",
-      commands: ["run benchmark"],
-      expected_outcomes: ["Option A is faster."],
-      estimated_cost: "$1",
-      safety_notes: ["Do not use production data."],
-      required_capabilities: ["benchmark"],
-    }).commands).toEqual(["run benchmark"]);
+    expect(
+      experimentProposalSchema.parse({
+        hypothesis: "A test separates the options.",
+        discriminating_metric: "latency",
+        setup: "Use a fixture.",
+        commands: ["run benchmark"],
+        expected_outcomes: ["Option A is faster."],
+        estimated_cost: "$1",
+        safety_notes: ["Do not use production data."],
+        required_capabilities: ["benchmark"],
+      }).commands,
+    ).toEqual(["run benchmark"]);
   });
 });
 
@@ -88,12 +103,30 @@ describe("adaptive committee routing", () => {
       allowUnknownCost: false,
       domain: "general",
       metrics: [
-        { adapter: "openai", model: "a", attempts: 8, validAttempts: 7, resolvedPredictions: 5, brierSum: 0.5, p75LatencyMs: 100 },
-        { adapter: "claude", model: "b", attempts: 8, validAttempts: 6, resolvedPredictions: 5, brierSum: 1, p75LatencyMs: 200 },
+        {
+          adapter: "openai",
+          model: "a",
+          attempts: 8,
+          validAttempts: 7,
+          resolvedPredictions: 5,
+          brierSum: 0.5,
+          p75LatencyMs: 100,
+        },
+        {
+          adapter: "claude",
+          model: "b",
+          attempts: 8,
+          validAttempts: 6,
+          resolvedPredictions: 5,
+          brierSum: 1,
+          p75LatencyMs: 200,
+        },
       ],
     });
     expect(selection.participants.map((participant) => participant.model)).toEqual(["a", "b"]);
-    expect(new Set(selection.participants.map((participant) => participant.provider_family)).size).toBe(2);
+    expect(
+      new Set(selection.participants.map((participant) => participant.provider_family)).size,
+    ).toBe(2);
     const breakdown = selection.participants[0]?.score_breakdown;
     if (breakdown === undefined) throw new Error("Expected a selected participant");
     expect(Object.values(breakdown).every((value) => Number.isFinite(value))).toBe(true);

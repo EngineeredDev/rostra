@@ -97,7 +97,12 @@ export class ProcessRunner {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     });
-    if (child.pid === undefined || child.stdin === null || child.stdout === null || child.stderr === null) {
+    if (
+      child.pid === undefined ||
+      child.stdin === null ||
+      child.stdout === null ||
+      child.stderr === null
+    ) {
       child.kill("SIGKILL");
       throw new AppError("process_start_failed", "Process gate did not expose required streams");
     }
@@ -128,12 +133,14 @@ export class ProcessRunner {
       throw error;
     }
 
-    child.stdin.end(`${JSON.stringify({
-      command: input.command,
-      args: input.args,
-      cwd: input.cwd,
-      env: input.env,
-    })}\n`);
+    child.stdin.end(
+      `${JSON.stringify({
+        command: input.command,
+        args: input.args,
+        cwd: input.cwd,
+        env: input.env,
+      })}\n`,
+    );
 
     let timedOut = false;
     let cancelled = false;

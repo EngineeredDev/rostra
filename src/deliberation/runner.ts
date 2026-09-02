@@ -95,19 +95,34 @@ function submissionEvidenceIds(kind: StageKind, submission: unknown): readonly s
 }
 function convergencePosition(response: CompletedResponse): PositionSnapshot | undefined {
   if (analysisStage[response.stageKind] === true) {
-    return { participantId: response.participantId, position: analysisSubmissionSchema.parse(response.submission).recommendation };
+    return {
+      participantId: response.participantId,
+      position: analysisSubmissionSchema.parse(response.submission).recommendation,
+    };
   }
   if (critiqueStage[response.stageKind] === true) {
-    return { participantId: response.participantId, position: critiqueSubmissionSchema.parse(response.submission).objection };
+    return {
+      participantId: response.participantId,
+      position: critiqueSubmissionSchema.parse(response.submission).objection,
+    };
   }
   if (response.stageKind === "evidence_collection") {
-    return { participantId: response.participantId, position: evidenceSubmissionSchema.parse(response.submission).assessment };
+    return {
+      participantId: response.participantId,
+      position: evidenceSubmissionSchema.parse(response.submission).assessment,
+    };
   }
   if (response.stageKind === "adjudication") {
-    return { participantId: response.participantId, position: adjudicationSubmissionSchema.parse(response.submission).rationale };
+    return {
+      participantId: response.participantId,
+      position: adjudicationSubmissionSchema.parse(response.submission).rationale,
+    };
   }
   if (response.stageKind === "experiment_proposal") {
-    return { participantId: response.participantId, position: experimentProposalSchema.parse(response.submission).hypothesis };
+    return {
+      participantId: response.participantId,
+      position: experimentProposalSchema.parse(response.submission).hypothesis,
+    };
   }
   if (response.stageKind === "final_ballot") {
     const ballot = ballotSubmissionSchema.parse(response.submission);
@@ -140,14 +155,16 @@ function saveProtocolCheckpoint(input: {
   const checkpoint = protocolCheckpointSchema.parse({
     protocol_state: input.state,
     completed_responses: input.responses,
-    completed_attempts: input.store.attempts(input.jobId)
+    completed_attempts: input.store
+      .attempts(input.jobId)
       .filter((attempt) => attempt.status === "succeeded")
       .map((attempt) => ({
         attempt_id: attempt.attempt_id,
         request_digest: attempt.request_digest,
       })),
     evidence_records: [...input.evidenceRecords].sort((left, right) =>
-      left.evidence_id.localeCompare(right.evidence_id)),
+      left.evidence_id.localeCompare(right.evidence_id),
+    ),
     selected_participants: input.selectedParticipants,
     committee_selection: input.committeeSelection,
     committee_limited: input.committeeLimited,
@@ -156,9 +173,7 @@ function saveProtocolCheckpoint(input: {
       ? {}
       : { convergence_report: input.convergenceReport }),
     ballot_stages: input.ballotStages,
-    ...(input.ballotProjection === undefined
-      ? {}
-      : { ballot_projection: input.ballotProjection }),
+    ...(input.ballotProjection === undefined ? {} : { ballot_projection: input.ballotProjection }),
     execution_isolation: input.executionIsolation,
     failed_participants: [...input.failedParticipants].sort(),
     next_stage: input.state.currentStageIndex,
@@ -179,27 +194,28 @@ export class ConfiguredProtocolRunner implements StageRunner {
 
   async #similarityProvider(): Promise<SimilarityProvider> {
     const similarity = this.#config.similarity;
-    const provider = similarity.provider === "local_minilm"
-      ? await createLocalMiniLmProvider({
-          dataHome: dirname(this.#databasePath),
-          agreementThreshold: similarity.agreement_threshold,
-          retrievalThreshold: similarity.retrieval_threshold,
-          thresholdsRevision: similarity.thresholds_revision,
-        })
-      : new OpenAiCompatibleEmbeddingProvider({
-          baseUrl: similarity.base_url,
-          model: similarity.model,
-          apiKeyEnvironment: similarity.api_key_env,
-          agreementThreshold: similarity.agreement_threshold,
-          retrievalThreshold: similarity.retrieval_threshold,
-          thresholdsRevision: similarity.thresholds_revision,
-          ...(this.#adapterOptions.environment === undefined
-            ? {}
-            : { environment: this.#adapterOptions.environment }),
-          ...(this.#adapterOptions.fetch === undefined
-            ? {}
-            : { fetch: this.#adapterOptions.fetch }),
-        });
+    const provider =
+      similarity.provider === "local_minilm"
+        ? await createLocalMiniLmProvider({
+            dataHome: dirname(this.#databasePath),
+            agreementThreshold: similarity.agreement_threshold,
+            retrievalThreshold: similarity.retrieval_threshold,
+            thresholdsRevision: similarity.thresholds_revision,
+          })
+        : new OpenAiCompatibleEmbeddingProvider({
+            baseUrl: similarity.base_url,
+            model: similarity.model,
+            apiKeyEnvironment: similarity.api_key_env,
+            agreementThreshold: similarity.agreement_threshold,
+            retrievalThreshold: similarity.retrieval_threshold,
+            thresholdsRevision: similarity.thresholds_revision,
+            ...(this.#adapterOptions.environment === undefined
+              ? {}
+              : { environment: this.#adapterOptions.environment }),
+            ...(this.#adapterOptions.fetch === undefined
+              ? {}
+              : { fetch: this.#adapterOptions.fetch }),
+          });
     await provider.initialize();
     return provider;
   }
@@ -208,25 +224,25 @@ export class ConfiguredProtocolRunner implements StageRunner {
     const similarityProvider = await this.#similarityProvider();
     const configuredProtocol = this.#config.protocols[job.request.protocol];
     const preset = shippedPresets[job.request.protocol];
-    const protocolStages = configuredProtocol !== undefined
-      ? configuredProtocol.stages.map((stage) => ({
-          id: stage.id,
-          kind: stage.kind,
-          visibility: stage.visibility,
-          allowedCapabilities: stage.allowed_capabilities,
-          stoppingPolicy: stage.stopping_policy,
-          minimumCompletions: stage.kind === "anonymous_aggregate"
-            ? 0
-            : stage.minimum_completions,
-        }))
-      : preset?.map((stage) => ({
-          id: stage.id,
-          kind: stage.kind,
-          visibility: stage.visibility,
-          allowedCapabilities: stage.allowedCapabilities,
-          stoppingPolicy: stage.stoppingPolicy,
-          minimumCompletions: stage.minimumCompletions,
-        }));
+    const protocolStages =
+      configuredProtocol !== undefined
+        ? configuredProtocol.stages.map((stage) => ({
+            id: stage.id,
+            kind: stage.kind,
+            visibility: stage.visibility,
+            allowedCapabilities: stage.allowed_capabilities,
+            stoppingPolicy: stage.stopping_policy,
+            minimumCompletions:
+              stage.kind === "anonymous_aggregate" ? 0 : stage.minimum_completions,
+          }))
+        : preset?.map((stage) => ({
+            id: stage.id,
+            kind: stage.kind,
+            visibility: stage.visibility,
+            allowedCapabilities: stage.allowedCapabilities,
+            stoppingPolicy: stage.stoppingPolicy,
+            minimumCompletions: stage.minimumCompletions,
+          }));
     if (protocolStages === undefined) {
       throw new AppError("protocol_not_found", job.request.protocol);
     }
@@ -248,9 +264,8 @@ export class ConfiguredProtocolRunner implements StageRunner {
     const routingDomain = job.request.domain_tags[0] ?? "general";
     const requiredStableChecks = configuredProtocol?.impasse_stability_checks ?? 2;
     const savedCheckpoint = store.latestCheckpoint(job.job_id);
-    const restoredCheckpoint = savedCheckpoint === undefined
-      ? undefined
-      : protocolCheckpointSchema.parse(savedCheckpoint);
+    const restoredCheckpoint =
+      savedCheckpoint === undefined ? undefined : protocolCheckpointSchema.parse(savedCheckpoint);
     for (const [adapter, model] of Object.entries(job.request.session_models)) {
       models.setSessionOverride(adapter, model);
     }
@@ -272,26 +287,21 @@ export class ConfiguredProtocolRunner implements StageRunner {
         size: job.request.committee.size,
         minProviderFamilies: job.request.committee.min_provider_families,
         preferredModels: job.request.session_models,
-        ...(job.request.max_cost_usd === undefined
-          ? {}
-          : { maxCostUsd: job.request.max_cost_usd }),
+        ...(job.request.max_cost_usd === undefined ? {} : { maxCostUsd: job.request.max_cost_usd }),
         ...(job.request.deadline_seconds === undefined
           ? {}
           : { deadlineSeconds: job.request.deadline_seconds }),
         allowUnknownCost: job.request.allow_unknown_cost,
         domain: routingDomain,
-        metrics: loadRoutingMetrics(
-          db,
-          workspaceIdentity.id,
-          routingModels,
-          routingDomain,
-        ),
+        metrics: loadRoutingMetrics(db, workspaceIdentity.id, routingModels, routingDomain),
       });
-      participants = selection.participants.map((participant) => participantSchema.parse({
-        participant_id: participant.participant_id,
-        cli: participant.cli,
-        model: participant.model,
-      }));
+      participants = selection.participants.map((participant) =>
+        participantSchema.parse({
+          participant_id: participant.participant_id,
+          cli: participant.cli,
+          model: participant.model,
+        }),
+      );
       committeeSelection = selection.participants.map((participant) => ({
         participant_id: participant.participant_id,
         provider_family: participant.provider_family,
@@ -305,7 +315,10 @@ export class ConfiguredProtocolRunner implements StageRunner {
     }
     if (participants.length < 2) {
       store.close();
-      throw new AppError("committee_unavailable", "The committee requires at least two eligible models");
+      throw new AppError(
+        "committee_unavailable",
+        "The committee requires at least two eligible models",
+      );
     }
     for (const participant of participants) models.validateParticipant(participant);
     let protocolState: ProtocolState;
@@ -384,8 +397,12 @@ export class ConfiguredProtocolRunner implements StageRunner {
             counts[recommendation] = (counts[recommendation] ?? 0) + 1;
           }
           const submission = {
-            agreements: Object.entries(counts).filter((entry) => entry[1] > 1).map((entry) => entry[0]),
-            disagreements: Object.entries(counts).filter((entry) => entry[1] === 1).map((entry) => entry[0]),
+            agreements: Object.entries(counts)
+              .filter((entry) => entry[1] > 1)
+              .map((entry) => entry[0]),
+            disagreements: Object.entries(counts)
+              .filter((entry) => entry[1] === 1)
+              .map((entry) => entry[0]),
             unresolved_claim_ids: [],
           };
           completedResponses.push({
@@ -421,153 +438,156 @@ export class ConfiguredProtocolRunner implements StageRunner {
           participantId: response.participantId,
           rawText: response.rawText,
         }));
-        const stageResults = await Promise.all(participants.map(async (participant) => {
-          try {
-            const prompt = buildStagePrompt({
-              question: job.question,
-              stageKind: stage.kind,
-              visibility: stage.visibility,
-              priorResponses,
-              ...(job.request.decision_options === undefined
-                ? {}
-                : { decisionOptions: job.request.decision_options }),
-              ...(participant.stance === undefined ? {} : { stance: participant.stance }),
-              allowedCapabilities: stage.allowedCapabilities,
-            });
-            const participantEvidence: EvidenceRecord[] = [];
-            const result = await invokeStructuredStage({
-              kind: stage.kind,
-              prompt,
-              invoke: async (attemptPrompt, attemptKind) => {
-                const requestDigest = createHash("sha256").update(attemptPrompt).digest("hex");
-                const attempt = store.createAttempt({
-                  jobId: job.job_id,
-                  stageId: stage.id,
-                  participantId: participant.participant_id,
-                  attemptKind,
-                  ordinal: attemptKind === "stage" ? stageOrdinal : stageOrdinal + 1,
-                  requestDigest,
-                  executionIsolation:
-                    this.#config.adapters[participant.cli]?.kind === "cli"
-                      ? "host_unrestricted"
-                      : "builtin_confined",
-                });
-                if (attempt.status === "succeeded" && attempt.raw_response !== undefined) {
-                  if (attempt.execution_isolation === "host_unrestricted") {
-                    executionIsolation = "host_unrestricted";
-                  }
-                  return attempt.raw_response;
-                }
-                let processRegistered = false;
-                const registrar: ProcessRegistration = {
-                  register: (identity) => {
-                    store.markAttemptStarted(attempt.attempt_id, true);
-                    store.registerProcess({
-                      jobId: job.job_id,
-                      attemptId: attempt.attempt_id,
-                      pid: identity.pid,
-                      pidStartedAtMs: identity.startedAtMs,
-                      ...(identity.processGroupId === undefined
-                        ? {}
-                        : { processGroupId: identity.processGroupId }),
-                      role: "adapter",
-                    });
-                    processRegistered = true;
-                  },
-                };
-                const adapterConfig = this.#config.adapters[participant.cli];
-                if (adapterConfig === undefined) {
-                  throw new AppError("adapter_disabled", participant.cli);
-                }
-                if (adapterConfig.kind === "http") {
-                  store.markAttemptStarted(attempt.attempt_id, true);
-                }
-                const registry = new AdapterRegistry(this.#config.adapters, {
-                  ...this.#adapterOptions,
-                  processRunner: new ProcessRunner({ registrar }),
-                  maxStdoutBytes: this.#config.execution.max_stdout_bytes,
-                  maxStderrBytes: this.#config.execution.max_stderr_bytes,
-                  terminationGraceMs: this.#config.execution.termination_grace_ms,
-                });
-                const invocationStartedAt = Date.now();
-                try {
-                  const adapterResult = await registry.invoke({
-                    adapter: participant.cli,
-                    model: participant.model,
-                    prompt: attemptPrompt,
-                    workingDirectory: job.request.working_directory,
-                    ...(participant.reasoning_effort === undefined
-                      ? {}
-                      : { reasoningEffort: participant.reasoning_effort }),
-                    allowHostTools: this.#config.execution.allow_host_tools,
-                    signal: context.signal,
-                  });
-                  if (adapterResult.executionIsolation === "host_unrestricted") {
-                    executionIsolation = "host_unrestricted";
-                  }
-                  store.finishAttempt(attempt.attempt_id, "succeeded", {
-                    responseId: randomUUID(),
-                    responseDigest: createHash("sha256").update(adapterResult.text).digest("hex"),
-                    rawResponse: adapterResult.text,
-                  });
-                  if (processRegistered) {
-                    store.markAttemptProcessesExited(
-                      attempt.attempt_id,
-                      adapterResult.cleanupStatus === "uncertain",
-                    );
-                  }
-                  store.recordQuality({
-                    adapter: participant.cli,
-                    model: participant.model,
-                    domain: routingDomain,
-                    valid_attempt: true,
-                    latencyMs: Date.now() - invocationStartedAt,
-                  });
-                  return adapterResult.text;
-                } catch (error) {
-                  store.finishAttempt(attempt.attempt_id, "failed", {
-                    errorType: error instanceof AppError ? error.code : "adapter_failed",
-                    errorMessage: errorMessage(error),
-                  });
-                  if (processRegistered) {
-                    store.markAttemptProcessesExited(attempt.attempt_id, true);
-                  }
-                  store.recordQuality({
-                    adapter: participant.cli,
-                    model: participant.model,
-                    domain: routingDomain,
-                    failure: true,
-                    latencyMs: Date.now() - invocationStartedAt,
-                  });
-                  throw error;
-                }
-              },
-              onToolRequest: async (rawText) => {
-                const request = extractEvidenceToolRequest(rawText);
-                if (request === undefined) return undefined;
-                const execution = await executeEvidenceTool({
-                  workspace: evidenceWorkspace,
-                  request,
-                  allowedCapabilities: new Set(stage.allowedCapabilities),
-                });
-                if (execution.evidence !== undefined) participantEvidence.push(execution.evidence);
-                return execution.response;
-              },
-            });
-            if (stage.kind === "final_ballot") {
-              store.recordQuality({
-                adapter: participant.cli,
-                model: participant.model,
-                domain: routingDomain,
-                countAttempt: false,
-                valid_ballot: true,
+        const stageResults = await Promise.all(
+          participants.map(async (participant) => {
+            try {
+              const prompt = buildStagePrompt({
+                question: job.question,
+                stageKind: stage.kind,
+                visibility: stage.visibility,
+                priorResponses,
+                ...(job.request.decision_options === undefined
+                  ? {}
+                  : { decisionOptions: job.request.decision_options }),
+                ...(participant.stance === undefined ? {} : { stance: participant.stance }),
+                allowedCapabilities: stage.allowedCapabilities,
               });
+              const participantEvidence: EvidenceRecord[] = [];
+              const result = await invokeStructuredStage({
+                kind: stage.kind,
+                prompt,
+                invoke: async (attemptPrompt, attemptKind) => {
+                  const requestDigest = createHash("sha256").update(attemptPrompt).digest("hex");
+                  const attempt = store.createAttempt({
+                    jobId: job.job_id,
+                    stageId: stage.id,
+                    participantId: participant.participant_id,
+                    attemptKind,
+                    ordinal: attemptKind === "stage" ? stageOrdinal : stageOrdinal + 1,
+                    requestDigest,
+                    executionIsolation:
+                      this.#config.adapters[participant.cli]?.kind === "cli"
+                        ? "host_unrestricted"
+                        : "builtin_confined",
+                  });
+                  if (attempt.status === "succeeded" && attempt.raw_response !== undefined) {
+                    if (attempt.execution_isolation === "host_unrestricted") {
+                      executionIsolation = "host_unrestricted";
+                    }
+                    return attempt.raw_response;
+                  }
+                  let processRegistered = false;
+                  const registrar: ProcessRegistration = {
+                    register: (identity) => {
+                      store.markAttemptStarted(attempt.attempt_id, true);
+                      store.registerProcess({
+                        jobId: job.job_id,
+                        attemptId: attempt.attempt_id,
+                        pid: identity.pid,
+                        pidStartedAtMs: identity.startedAtMs,
+                        ...(identity.processGroupId === undefined
+                          ? {}
+                          : { processGroupId: identity.processGroupId }),
+                        role: "adapter",
+                      });
+                      processRegistered = true;
+                    },
+                  };
+                  const adapterConfig = this.#config.adapters[participant.cli];
+                  if (adapterConfig === undefined) {
+                    throw new AppError("adapter_disabled", participant.cli);
+                  }
+                  if (adapterConfig.kind === "http") {
+                    store.markAttemptStarted(attempt.attempt_id, true);
+                  }
+                  const registry = new AdapterRegistry(this.#config.adapters, {
+                    ...this.#adapterOptions,
+                    processRunner: new ProcessRunner({ registrar }),
+                    maxStdoutBytes: this.#config.execution.max_stdout_bytes,
+                    maxStderrBytes: this.#config.execution.max_stderr_bytes,
+                    terminationGraceMs: this.#config.execution.termination_grace_ms,
+                  });
+                  const invocationStartedAt = Date.now();
+                  try {
+                    const adapterResult = await registry.invoke({
+                      adapter: participant.cli,
+                      model: participant.model,
+                      prompt: attemptPrompt,
+                      workingDirectory: job.request.working_directory,
+                      ...(participant.reasoning_effort === undefined
+                        ? {}
+                        : { reasoningEffort: participant.reasoning_effort }),
+                      allowHostTools: this.#config.execution.allow_host_tools,
+                      signal: context.signal,
+                    });
+                    if (adapterResult.executionIsolation === "host_unrestricted") {
+                      executionIsolation = "host_unrestricted";
+                    }
+                    store.finishAttempt(attempt.attempt_id, "succeeded", {
+                      responseId: randomUUID(),
+                      responseDigest: createHash("sha256").update(adapterResult.text).digest("hex"),
+                      rawResponse: adapterResult.text,
+                    });
+                    if (processRegistered) {
+                      store.markAttemptProcessesExited(
+                        attempt.attempt_id,
+                        adapterResult.cleanupStatus === "uncertain",
+                      );
+                    }
+                    store.recordQuality({
+                      adapter: participant.cli,
+                      model: participant.model,
+                      domain: routingDomain,
+                      valid_attempt: true,
+                      latencyMs: Date.now() - invocationStartedAt,
+                    });
+                    return adapterResult.text;
+                  } catch (error) {
+                    store.finishAttempt(attempt.attempt_id, "failed", {
+                      errorType: error instanceof AppError ? error.code : "adapter_failed",
+                      errorMessage: errorMessage(error),
+                    });
+                    if (processRegistered) {
+                      store.markAttemptProcessesExited(attempt.attempt_id, true);
+                    }
+                    store.recordQuality({
+                      adapter: participant.cli,
+                      model: participant.model,
+                      domain: routingDomain,
+                      failure: true,
+                      latencyMs: Date.now() - invocationStartedAt,
+                    });
+                    throw error;
+                  }
+                },
+                onToolRequest: async (rawText) => {
+                  const request = extractEvidenceToolRequest(rawText);
+                  if (request === undefined) return undefined;
+                  const execution = await executeEvidenceTool({
+                    workspace: evidenceWorkspace,
+                    request,
+                    allowedCapabilities: new Set(stage.allowedCapabilities),
+                  });
+                  if (execution.evidence !== undefined)
+                    participantEvidence.push(execution.evidence);
+                  return execution.response;
+                },
+              });
+              if (stage.kind === "final_ballot") {
+                store.recordQuality({
+                  adapter: participant.cli,
+                  model: participant.model,
+                  domain: routingDomain,
+                  countAttempt: false,
+                  valid_ballot: true,
+                });
+              }
+              return { participant, result, evidenceRecords: participantEvidence };
+            } catch (error) {
+              return { participant, error };
             }
-            return { participant, result, evidenceRecords: participantEvidence };
-          } catch (error) {
-            return { participant, error };
-          }
-        }));
+          }),
+        );
 
         const stageBallots: RawBallot[] = [];
         const stageFailures: string[] = [];
@@ -589,7 +609,9 @@ export class ConfiguredProtocolRunner implements StageRunner {
           completions += 1;
           evidenceRecords.push(...stageResult.evidenceRecords);
           const submission = parseJsonValue(stageResult.result.submission);
-          const availableEvidenceIds = new Set(evidenceRecords.map((evidence) => evidence.evidence_id));
+          const availableEvidenceIds = new Set(
+            evidenceRecords.map((evidence) => evidence.evidence_id),
+          );
           for (const evidenceId of submissionEvidenceIds(stage.kind, submission)) {
             if (!availableEvidenceIds.has(evidenceId)) {
               throw new AppError("unknown_evidence_reference", evidenceId);
@@ -628,7 +650,10 @@ export class ConfiguredProtocolRunner implements StageRunner {
             `${stage.id} completed ${completions}/${stage.minimumCompletions}${detail}`,
           );
         }
-        protocolState = reduceProtocol(protocolState, { type: "complete_stage", stageId: stage.id });
+        protocolState = reduceProtocol(protocolState, {
+          type: "complete_stage",
+          stageId: stage.id,
+        });
         if (stage.kind === "final_ballot") {
           ballotStages.push({
             stageId: stage.id,
@@ -638,8 +663,12 @@ export class ConfiguredProtocolRunner implements StageRunner {
           });
         }
         const currentResponses = participants.map((participant) =>
-          completedResponses.find((response) =>
-            response.stageId === stage.id && response.participantId === participant.participant_id));
+          completedResponses.find(
+            (response) =>
+              response.stageId === stage.id &&
+              response.participantId === participant.participant_id,
+          ),
+        );
         if (currentResponses.every((response) => response !== undefined)) {
           const snapshot = currentResponses
             .map((response) => convergencePosition(response))
@@ -719,10 +748,12 @@ export class ConfiguredProtocolRunner implements StageRunner {
         executionIsolation,
         ballotProjection: parseJsonValue(ballot),
       });
-      const analysisResponses = completedResponses
-        .filter((response) => analysisStage[response.stageKind] === true);
-      const analyses = analysisResponses
-        .map((response) => analysisSubmissionSchema.parse(response.submission));
+      const analysisResponses = completedResponses.filter(
+        (response) => analysisStage[response.stageKind] === true,
+      );
+      const analyses = analysisResponses.map((response) =>
+        analysisSubmissionSchema.parse(response.submission),
+      );
       const decisionPredictions = analysisResponses.flatMap((response) => {
         const analysis = analysisSubmissionSchema.parse(response.submission);
         const participant = participants.find(
@@ -757,16 +788,18 @@ export class ConfiguredProtocolRunner implements StageRunner {
         (ballot.outcome === "tie" || ballot.outcome === "plurality") &&
         critiques.length > 0
       ) {
-        experimentProposals = [experimentProposalSchema.parse({
-          hypothesis: "One disputed option will outperform the other option.",
-          discriminating_metric: "Measure the unresolved decision criterion.",
-          setup: "Use an isolated representative fixture.",
-          commands: [],
-          expected_outcomes: ["The measured result favors one option."],
-          estimated_cost: "unknown",
-          safety_notes: ["Review the setup before any execution."],
-          required_capabilities: [],
-        })];
+        experimentProposals = [
+          experimentProposalSchema.parse({
+            hypothesis: "One disputed option will outperform the other option.",
+            discriminating_metric: "Measure the unresolved decision criterion.",
+            setup: "Use an isolated representative fixture.",
+            commands: [],
+            expected_outcomes: ["The measured result favors one option."],
+            estimated_cost: "unknown",
+            safety_notes: ["Review the setup before any execution."],
+            required_capabilities: [],
+          }),
+        ];
       }
       const decisionId = randomUUID();
       const nowMs = Date.now();
@@ -793,7 +826,8 @@ export class ConfiguredProtocolRunner implements StageRunner {
         convergence: convergenceReport,
         claims: analyses.flatMap((analysis) => analysis.claims),
         evidence: [...evidenceRecords].sort((left, right) =>
-          left.evidence_id.localeCompare(right.evidence_id)),
+          left.evidence_id.localeCompare(right.evidence_id),
+        ),
         predictions: decisionPredictions,
         agreements,
         assumptions: [...new Set(analyses.flatMap((analysis) => analysis.assumptions))],
@@ -802,8 +836,7 @@ export class ConfiguredProtocolRunner implements StageRunner {
         experiment_proposals: experimentProposals,
         execution_isolation: executionIsolation,
         created_at_ms: nowMs,
-        review_due_at_ms:
-          nowMs + this.#config.decision_graph.default_review_days * 86_400_000,
+        review_due_at_ms: nowMs + this.#config.decision_graph.default_review_days * 86_400_000,
       });
       const summary = renderDecisionSummary(packet);
       const transcriptDirectory = join(dirname(this.#databasePath), "transcripts");

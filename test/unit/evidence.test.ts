@@ -33,7 +33,12 @@ describe("root-confined evidence operations", () => {
       timeoutMs: 5_000,
     });
     expect(evidenceOperationNames).toEqual([
-      "read_file", "search_files", "list_files", "get_file_tree", "git_status", "git_diff",
+      "read_file",
+      "search_files",
+      "list_files",
+      "get_file_tree",
+      "git_status",
+      "git_diff",
     ]);
     await expect(workspace.readFile("src/inside.txt")).resolves.toMatchObject({
       text: "needle inside",
@@ -51,9 +56,13 @@ describe("root-confined evidence operations", () => {
     await writeFile(join(root, "src", "binary.bin"), Buffer.from([0, 1, 2]));
     const workspace = await EvidenceWorkspace.create(root);
     for (const path of ["../outside.txt", outside, "src/escape.txt"]) {
-      await expect(workspace.readFile(path)).rejects.toMatchObject({ code: "evidence_path_escape" });
+      await expect(workspace.readFile(path)).rejects.toMatchObject({
+        code: "evidence_path_escape",
+      });
     }
-    await expect(workspace.readFile("src/binary.bin")).rejects.toMatchObject({ code: "binary_file" });
+    await expect(workspace.readFile("src/binary.bin")).rejects.toMatchObject({
+      code: "binary_file",
+    });
   });
 
   it("rejects a symlink swap before reading outside content", async () => {

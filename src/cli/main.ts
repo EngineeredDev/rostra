@@ -79,19 +79,21 @@ async function runDecision(args: readonly string[]): Promise<void> {
   });
   try {
     const reviewer = new DecisionCiReviewer(db);
-    const result = await reviewer.review(reviewDecisionChangeInputSchema.parse({
-      working_directory: workingDirectory,
-      base_ref: baseRef,
-      head_ref: headRef,
-      fail_on: failOn,
-    }));
+    const result = await reviewer.review(
+      reviewDecisionChangeInputSchema.parse({
+        working_directory: workingDirectory,
+        base_ref: baseRef,
+        head_ref: headRef,
+        fail_on: failOn,
+      }),
+    );
     if (format === "json") {
       process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     } else if (format === "sarif") {
       process.stdout.write(`${JSON.stringify(renderSarif(result, PACKAGE_VERSION), null, 2)}\n`);
     } else {
-      const lines = result.findings.map((finding) =>
-        `${finding.severity} ${finding.finding_type}: ${finding.remediation}`,
+      const lines = result.findings.map(
+        (finding) => `${finding.severity} ${finding.finding_type}: ${finding.remediation}`,
       );
       process.stdout.write(`${lines.length === 0 ? "No findings." : lines.join("\n")}\n`);
     }
@@ -132,7 +134,10 @@ export function parseServeArgs(args: readonly string[]): ServeOptions {
   }
   const parsed = serveOptionsSchema.safeParse(values);
   if (!parsed.success) {
-    throw new AppError("invalid_command", "Usage: rostra serve [--http|--stdio] [--host H] [--port N]");
+    throw new AppError(
+      "invalid_command",
+      "Usage: rostra serve [--http|--stdio] [--host H] [--port N]",
+    );
   }
   return parsed.data;
 }

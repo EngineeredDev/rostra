@@ -68,41 +68,50 @@ describe("durable decision origins", () => {
     });
     expect(publication).toEqual({ decisionId, created: true });
     const childId = randomUUID();
-    expect(publisher.publish({
-      jobId: randomUUID(),
-      decisionId: childId,
-      workspaceId: "workspace-a",
-      canonicalRoot: root,
-      requestFingerprint: "child",
-      continuationId: decisionId,
-      question: "continue this decision",
-      protocol: request.protocol,
-      resultStatus: "partial",
-      canonicalResult: { status: "partial", value: 2 },
-      summary: "child result",
-      executionIsolation: "builtin_confined",
-      reviewDueAtMs: 1_500,
-      nowMs: 30,
-    })).toEqual({ decisionId: childId, created: true });
-    expect(db.prepare<[string, string], { thread_id: string | null }>(
-      "SELECT thread_id FROM decisions WHERE id IN (?, ?) ORDER BY id",
-    ).all(decisionId, childId).map((row) => row.thread_id)).toEqual([decisionId, decisionId]);
+    expect(
+      publisher.publish({
+        jobId: randomUUID(),
+        decisionId: childId,
+        workspaceId: "workspace-a",
+        canonicalRoot: root,
+        requestFingerprint: "child",
+        continuationId: decisionId,
+        question: "continue this decision",
+        protocol: request.protocol,
+        resultStatus: "partial",
+        canonicalResult: { status: "partial", value: 2 },
+        summary: "child result",
+        executionIsolation: "builtin_confined",
+        reviewDueAtMs: 1_500,
+        nowMs: 30,
+      }),
+    ).toEqual({ decisionId: childId, created: true });
+    expect(
+      db
+        .prepare<[string, string], { thread_id: string | null }>(
+          "SELECT thread_id FROM decisions WHERE id IN (?, ?) ORDER BY id",
+        )
+        .all(decisionId, childId)
+        .map((row) => row.thread_id),
+    ).toEqual([decisionId, decisionId]);
     expect(store.purgeTerminalJobs(1_000, 100)).toBe(1);
-    expect(publisher.publish({
-      jobId: submitted.job_id,
-      decisionId: randomUUID(),
-      workspaceId: "workspace-a",
-      canonicalRoot: root,
-      requestFingerprint: "ignored-on-retry",
-      question: request.question,
-      protocol: request.protocol,
-      resultStatus: "partial",
-      canonicalResult: { status: "partial", value: 2 },
-      summary: "retry",
-      executionIsolation: "builtin_confined",
-      reviewDueAtMs: 2_000,
-      nowMs: 1_000,
-    })).toEqual({ decisionId, created: false });
+    expect(
+      publisher.publish({
+        jobId: submitted.job_id,
+        decisionId: randomUUID(),
+        workspaceId: "workspace-a",
+        canonicalRoot: root,
+        requestFingerprint: "ignored-on-retry",
+        question: request.question,
+        protocol: request.protocol,
+        resultStatus: "partial",
+        canonicalResult: { status: "partial", value: 2 },
+        summary: "retry",
+        executionIsolation: "builtin_confined",
+        reviewDueAtMs: 2_000,
+        nowMs: 1_000,
+      }),
+    ).toEqual({ decisionId, created: false });
     expect(publisher.getDecision(decisionId)?.summary).toBe("partial result");
     store.close();
   });

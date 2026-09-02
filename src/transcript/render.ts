@@ -25,16 +25,12 @@ export function renderTranscript(
     "",
     "## Raw Stage Responses",
   ];
-  for (const response of [...responses].sort((left, right) =>
-    left.stageId.localeCompare(right.stageId) ||
-    left.participantId.localeCompare(right.participantId),
+  for (const response of [...responses].sort(
+    (left, right) =>
+      left.stageId.localeCompare(right.stageId) ||
+      left.participantId.localeCompare(right.participantId),
   )) {
-    lines.push(
-      "",
-      `### ${response.stageId} — ${response.participantId}`,
-      "",
-      response.rawText,
-    );
+    lines.push("", `### ${response.stageId} — ${response.participantId}`, "", response.rawText);
   }
   lines.push(
     "",

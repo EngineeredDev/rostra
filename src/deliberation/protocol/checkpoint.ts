@@ -1,11 +1,13 @@
 import { z } from "zod/v4";
 import { stageKindSchema } from "../../config/schema.js";
-import { executionIsolationSchema, participantSchema, slugSchema, uuidSchema } from "../../contracts/common.js";
-import { committeeSelectionRecordSchema, evidenceRecordSchema } from "../../contracts/results.js";
 import {
-  convergenceReportSchema,
-  positionSnapshotSchema,
-} from "./convergence.js";
+  executionIsolationSchema,
+  participantSchema,
+  slugSchema,
+  uuidSchema,
+} from "../../contracts/common.js";
+import { committeeSelectionRecordSchema, evidenceRecordSchema } from "../../contracts/results.js";
+import { convergenceReportSchema, positionSnapshotSchema } from "./convergence.js";
 
 const stageDefinitionSchema = z.strictObject({
   id: slugSchema,
@@ -58,10 +60,12 @@ const ballotStageSchema = z.strictObject({
 export const protocolCheckpointSchema = z.strictObject({
   protocol_state: protocolStateCheckpointSchema,
   completed_responses: z.array(completedResponseSchema),
-  completed_attempts: z.array(z.strictObject({
-    attempt_id: uuidSchema,
-    request_digest: z.string().min(1),
-  })),
+  completed_attempts: z.array(
+    z.strictObject({
+      attempt_id: uuidSchema,
+      request_digest: z.string().min(1),
+    }),
+  ),
   evidence_records: z.array(evidenceRecordSchema),
   selected_participants: z.array(participantSchema),
   committee_selection: z.array(committeeSelectionRecordSchema),

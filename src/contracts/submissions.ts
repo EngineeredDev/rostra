@@ -31,15 +31,17 @@ export const critiqueSubmissionSchema = z.strictObject({
   evidence_request: nonemptyStringSchema.optional(),
 });
 
-export const ballotSubmissionSchema = z.strictObject({
-  option_id: slugSchema.optional(),
-  option_label: nonemptyStringSchema.optional(),
-  confidence: z.number().min(0).max(1),
-  rationale: nonemptyStringSchema,
-  continue_debate: z.boolean(),
-}).refine((value) => value.option_id !== undefined || value.option_label !== undefined, {
-  message: "A ballot requires option_id or option_label",
-});
+export const ballotSubmissionSchema = z
+  .strictObject({
+    option_id: slugSchema.optional(),
+    option_label: nonemptyStringSchema.optional(),
+    confidence: z.number().min(0).max(1),
+    rationale: nonemptyStringSchema,
+    continue_debate: z.boolean(),
+  })
+  .refine((value) => value.option_id !== undefined || value.option_label !== undefined, {
+    message: "A ballot requires option_id or option_label",
+  });
 
 export const evidenceSubmissionSchema = z.strictObject({
   claim_id: uuidSchema,
@@ -71,7 +73,6 @@ export const anonymousAggregateSchema = z.strictObject({
   disagreements: z.array(nonemptyStringSchema),
   unresolved_claim_ids: z.array(uuidSchema),
 });
-
 
 export const stageSubmissionSchemas = {
   independent_analysis: analysisSubmissionSchema,
@@ -106,12 +107,19 @@ export function extractStageSubmission(kind: StageKind, rawText: string): Extrac
   try {
     value = JSON.parse(jsonText);
   } catch (error) {
-    throw new AppError("invalid_stage_result", `Stage ${kind} returned invalid JSON: ${errorMessage(error)}`);
+    throw new AppError(
+      "invalid_stage_result",
+      `Stage ${kind} returned invalid JSON: ${errorMessage(error)}`,
+    );
   }
   const schema = stageSubmissionSchemas[kind];
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
-    throw new AppError("invalid_stage_result", `Stage ${kind} result violated its contract`, parsed.error.issues);
+    throw new AppError(
+      "invalid_stage_result",
+      `Stage ${kind} result violated its contract`,
+      parsed.error.issues,
+    );
   }
   return { raw_text: rawText, submission: parsed.data };
 }
@@ -120,4 +128,3 @@ export type AnalysisSubmission = z.infer<typeof analysisSubmissionSchema>;
 export type CritiqueSubmission = z.infer<typeof critiqueSubmissionSchema>;
 export type BallotSubmission = z.infer<typeof ballotSubmissionSchema>;
 export type ExperimentProposal = z.infer<typeof experimentProposalSchema>;
-

@@ -42,17 +42,47 @@ describe("configuration v2", () => {
       await writeFile(path, minimal);
     }
 
-    await expect(resolveConfigPath({ env: { ROSTRA_CONFIG: explicit }, homeDir: join(base, "home"), packageRoot: join(base, "package") })).resolves.toBe(explicit);
-    await expect(resolveConfigPath({ env: { XDG_CONFIG_HOME: join(base, "xdg") }, homeDir: join(base, "home"), packageRoot: join(base, "package") })).resolves.toBe(xdg);
-    await expect(resolveConfigPath({ env: {}, homeDir: join(base, "home"), packageRoot: join(base, "package") })).resolves.toBe(home);
+    await expect(
+      resolveConfigPath({
+        env: { ROSTRA_CONFIG: explicit },
+        homeDir: join(base, "home"),
+        packageRoot: join(base, "package"),
+      }),
+    ).resolves.toBe(explicit);
+    await expect(
+      resolveConfigPath({
+        env: { XDG_CONFIG_HOME: join(base, "xdg") },
+        homeDir: join(base, "home"),
+        packageRoot: join(base, "package"),
+      }),
+    ).resolves.toBe(xdg);
+    await expect(
+      resolveConfigPath({
+        env: {},
+        homeDir: join(base, "home"),
+        packageRoot: join(base, "package"),
+      }),
+    ).resolves.toBe(home);
     await writeFile(home, "");
-    await expect(resolveConfigPath({ env: {}, homeDir: join(base, "missing-home"), packageRoot: join(base, "package") })).resolves.toBe(packaged);
+    await expect(
+      resolveConfigPath({
+        env: {},
+        homeDir: join(base, "missing-home"),
+        packageRoot: join(base, "package"),
+      }),
+    ).resolves.toBe(packaged);
   });
 
   it("derives data home with explicit and XDG precedence", () => {
-    expect(resolveDataHome({ env: { ROSTRA_DATA_HOME: "/data/explicit" }, homeDir: "/home/user" })).toBe(resolve("/data/explicit"));
-    expect(resolveDataHome({ env: { XDG_DATA_HOME: "/data/xdg" }, homeDir: "/home/user" })).toBe(join(resolve("/data/xdg"), "rostra"));
-    expect(resolveDataHome({ env: {}, homeDir: "/home/user" })).toBe(join(resolve("/home/user"), ".local", "share", "rostra"));
+    expect(
+      resolveDataHome({ env: { ROSTRA_DATA_HOME: "/data/explicit" }, homeDir: "/home/user" }),
+    ).toBe(resolve("/data/explicit"));
+    expect(resolveDataHome({ env: { XDG_DATA_HOME: "/data/xdg" }, homeDir: "/home/user" })).toBe(
+      join(resolve("/data/xdg"), "rostra"),
+    );
+    expect(resolveDataHome({ env: {}, homeDir: "/home/user" })).toBe(
+      join(resolve("/home/user"), ".local", "share", "rostra"),
+    );
   });
 
   it("rejects legacy versions and unknown top-level sections", async () => {

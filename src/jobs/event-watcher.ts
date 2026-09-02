@@ -73,7 +73,7 @@ export class JobEventWatcher {
         active.add(jobId);
         this.#drain(jobId);
       }
-      for (const jobId of [...this.#watermarks.keys()]) {
+      for (const jobId of this.#watermarks.keys()) {
         if (active.has(jobId)) {
           continue;
         }

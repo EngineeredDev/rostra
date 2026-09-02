@@ -27,9 +27,15 @@ describe("workspace-scoped decisions", () => {
     const decisionId = randomUUID();
     const supersedingId = randomUUID();
     const now = Date.now();
-    db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES (?, ?, ?)")
-      .run(workspace.id, workspace.canonicalRoot, now);
-    for (const [id, question] of [[decisionId, "Use the file"], [supersedingId, "Replace the file"]]) {
+    db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES (?, ?, ?)").run(
+      workspace.id,
+      workspace.canonicalRoot,
+      now,
+    );
+    for (const [id, question] of [
+      [decisionId, "Use the file"],
+      [supersedingId, "Replace the file"],
+    ]) {
       db.prepare(`
         INSERT INTO decisions(
           id, workspace_id, question, protocol, result_status, outcome_status,
@@ -62,16 +68,22 @@ describe("workspace-scoped decisions", () => {
     await expect(repository.query(query)).resolves.toMatchObject({
       decisions: [{ id: decisionId, stale: false }],
     });
-    await expect(repository.query(queryDecisionsInputSchema.parse({
-      working_directory: otherRoot,
-      decision_id: decisionId,
-    }))).rejects.toMatchObject({ code: "decision_not_found" });
+    await expect(
+      repository.query(
+        queryDecisionsInputSchema.parse({
+          working_directory: otherRoot,
+          decision_id: decisionId,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "decision_not_found" });
 
     await writeFile(evidencePath, "changed");
     const stale = await repository.query(query);
     expect(stale.decisions[0]).toMatchObject({ stale: true });
     expect(stale.decisions[0]?.warnings).toContain(`changed_evidence:${evidenceId}`);
-    expect((await repository.listStale(root, 20)).decisions.map((decision) => decision.id)).toContain(decisionId);
+    expect(
+      (await repository.listStale(root, 20)).decisions.map((decision) => decision.id),
+    ).toContain(decisionId);
 
     await repository.recordOutcome({
       working_directory: root,
@@ -88,10 +100,16 @@ describe("workspace-scoped decisions", () => {
       measurements: {},
       superseding_decision_id: supersedingId,
     });
-    expect(db.prepare<[], { count: number }>("SELECT COUNT(*) AS count FROM outcomes").get()?.count).toBe(2);
-    expect(db.prepare<[], { count: number }>(`
+    expect(
+      db.prepare<[], { count: number }>("SELECT COUNT(*) AS count FROM outcomes").get()?.count,
+    ).toBe(2);
+    expect(
+      db
+        .prepare<[], { count: number }>(`
       SELECT COUNT(*) AS count FROM decision_relations WHERE relation_type = 'supersedes'
-    `).get()?.count).toBe(1);
+    `)
+        .get()?.count,
+    ).toBe(1);
     db.close();
   });
 });

@@ -10,14 +10,14 @@ Rostra includes six protocol presets. Each preset defines a sequence of model st
 
 Stage names guide the models, but Rostra does not inject full facilitator scripts or fixed attacker and defender personas.
 
-| Protocol | Stages | Use it for | Model rounds |
-| --- | --- | --- | ---: |
-| `quick` | Independent analysis → ballot | Low-cost decisions that need independent views and a final vote | 2 |
-| `conference` | Independent analysis → critique → revision → ballot | General decisions that benefit from peer critique and revision | 4 |
-| `red_team` | Proposal → adversarial attack → defense → ballot | Stress-testing proposals against counterarguments and failure modes | 4 |
-| `delphi` | Independent analysis → anonymous aggregate → revision → ballot | Reducing identity and authority effects before revision | 3, plus local aggregation |
-| `premortem` | Premortem → revision → ballot | Surfacing execution risks before a final decision | 3 |
-| `evidence_tribunal` | Proposal → evidence → cross-examination → adjudication → ballot | Repository decisions that require inspectable evidence | 5, plus evidence continuations |
+| Protocol            | Stages                                                          | Use it for                                                          |                   Model rounds |
+| ------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- | -----------------------------: |
+| `quick`             | Independent analysis → ballot                                   | Low-cost decisions that need independent views and a final vote     |                              2 |
+| `conference`        | Independent analysis → critique → revision → ballot             | General decisions that benefit from peer critique and revision      |                              4 |
+| `red_team`          | Proposal → adversarial attack → defense → ballot                | Stress-testing proposals against counterarguments and failure modes |                              4 |
+| `delphi`            | Independent analysis → anonymous aggregate → revision → ballot  | Reducing identity and authority effects before revision             |      3, plus local aggregation |
+| `premortem`         | Premortem → revision → ballot                                   | Surfacing execution risks before a final decision                   |                              3 |
+| `evidence_tribunal` | Proposal → evidence → cross-examination → adjudication → ballot | Repository decisions that require inspectable evidence              | 5, plus evidence continuations |
 
 One model round runs all committee participants concurrently. Later preset stages receive prior responses without participant identities.
 
@@ -289,6 +289,7 @@ The image includes Git. It does not include third-party model CLIs.
 pnpm build
 pnpm typecheck
 pnpm lint
+pnpm format:check
 pnpm test
 pnpm generate:schemas
 ```

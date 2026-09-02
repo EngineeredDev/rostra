@@ -24,11 +24,7 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-function request(
-  root: string,
-  question: string,
-  continuationId?: string,
-): StartDeliberationInput {
+function request(root: string, question: string, continuationId?: string): StartDeliberationInput {
   return startDeliberationInputSchema.parse({
     question,
     working_directory: root,
@@ -148,23 +144,28 @@ describe("decision continuation chains", () => {
       nowMs: 300,
     });
 
-    const threadRows = db.prepare<[], { id: string; thread_id: string | null }>(`
+    const threadRows = db
+      .prepare<[], { id: string; thread_id: string | null }>(`
       SELECT id, thread_id FROM decisions ORDER BY created_at_ms, id
-    `).all();
+    `)
+      .all();
     expect(threadRows).toEqual([
       { id: first, thread_id: first },
       { id: second, thread_id: first },
       { id: third, thread_id: first },
     ]);
-    expect(db.prepare<[], { count: number }>("SELECT count(*) AS count FROM threads").get())
-      .toEqual({ count: 1 });
+    expect(
+      db.prepare<[], { count: number }>("SELECT count(*) AS count FROM threads").get(),
+    ).toEqual({ count: 1 });
 
-    const page = await new DecisionRepository(db).query(queryDecisionsInputSchema.parse({
-      working_directory: root,
-      continuation_id: second,
-      include_stale: true,
-      limit: 10,
-    }));
+    const page = await new DecisionRepository(db).query(
+      queryDecisionsInputSchema.parse({
+        working_directory: root,
+        continuation_id: second,
+        include_stale: true,
+        limit: 10,
+      }),
+    );
     expect(page.decisions.map((decision) => decision.id)).toEqual([first, second, third]);
     store.close();
   });

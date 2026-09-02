@@ -17,12 +17,10 @@ interface StagePromptInput {
 }
 
 const claimId = "11111111-1111-4111-8111-111111111111";
-const claimExample =
-  `{"claim_id":"${claimId}","type":"fact","text":"...","confidence":0.0}`;
+const claimExample = `{"claim_id":"${claimId}","type":"fact","text":"...","confidence":0.0}`;
 const predictionExample =
   '{"statement":"...","probability":0.0,"target_date":"2030-01-01T00:00:00Z","resolution_criteria":"..."}';
-const analysisExample =
-  `{"claims":[${claimExample}],"assumptions":["..."],"recommendation":"...","confidence":0.0,"predictions":[${predictionExample}]}`;
+const analysisExample = `{"claims":[${claimExample}],"assumptions":["..."],"recommendation":"...","confidence":0.0,"predictions":[${predictionExample}]}`;
 
 const outputInstructions: Record<StageKind, string> = {
   independent_analysis: analysisExample,
@@ -36,8 +34,10 @@ const outputInstructions: Record<StageKind, string> = {
   evidence_collection: `{"claim_id":"${claimId}","evidence_requests":["..."],"evidence_ids":["${claimId}"],"assessment":"..."}`,
   cross_examination: `{"target_claim_ids":["${claimId}"],"objection":"...","evidence_request":"..."}`,
   adjudication: `{"claim_id":"${claimId}","verdict":"unknown","rationale":"...","evidence_ids":["${claimId}"]}`,
-  experiment_proposal: '{"hypothesis":"...","discriminating_metric":"...","setup":"...","commands":["..."],"expected_outcomes":["..."],"estimated_cost":"...","safety_notes":["..."],"required_capabilities":["read_file"]}',
-  final_ballot: '{"option_id":"option-id","confidence":0.0,"rationale":"...","continue_debate":false}',
+  experiment_proposal:
+    '{"hypothesis":"...","discriminating_metric":"...","setup":"...","commands":["..."],"expected_outcomes":["..."],"estimated_cost":"...","safety_notes":["..."],"required_capabilities":["read_file"]}',
+  final_ballot:
+    '{"option_id":"option-id","confidence":0.0,"rationale":"...","continue_debate":false}',
 };
 
 export function stageResultExample(kind: StageKind): string {
@@ -45,10 +45,7 @@ export function stageResultExample(kind: StageKind): string {
 }
 
 export function buildStagePrompt(input: StagePromptInput): string {
-  const lines = [
-    `Question: ${input.question}`,
-    `Stage: ${input.stageKind}`,
-  ];
+  const lines = [`Question: ${input.question}`, `Stage: ${input.stageKind}`];
   if (input.decisionOptions !== undefined) {
     lines.push(
       "Decision options (use the ID in option_id):",
@@ -61,9 +58,11 @@ export function buildStagePrompt(input: StagePromptInput): string {
     for (const [index, response] of [...input.priorResponses]
       .sort((left, right) => left.participantId.localeCompare(right.participantId))
       .entries()) {
-      lines.push(input.visibility === "full_prior"
-        ? `Participant ${response.participantId}: ${response.rawText}`
-        : `P${index + 1}: ${response.rawText}`);
+      lines.push(
+        input.visibility === "full_prior"
+          ? `Participant ${response.participantId}: ${response.rawText}`
+          : `P${index + 1}: ${response.rawText}`,
+      );
     }
   }
   if (input.allowedCapabilities !== undefined && input.allowedCapabilities.length > 0) {
@@ -77,8 +76,8 @@ export function buildStagePrompt(input: StagePromptInput): string {
   lines.push(
     "Return your analysis as plain text.",
     "End the response with exactly one structured result line.",
-    "Match the shape below exactly: array elements keep the field names shown, and every"
-    + " *_id value must be a distinct RFC 4122 UUID.",
+    "Match the shape below exactly: array elements keep the field names shown, and every" +
+      " *_id value must be a distinct RFC 4122 UUID.",
     `ROSTRA_RESULT: ${outputInstructions[input.stageKind]}`,
   );
   return lines.join("\n\n");

@@ -86,8 +86,8 @@ export function analyzeConvergence(input: ConvergenceInput): ConvergenceReport {
     });
     withinScores.push(...transitionScores);
     const stable = transitionScores.every((score) => score >= input.agreementThreshold);
-    const voteMatches = input.participantIds.filter((participantId) =>
-      previous.get(participantId)?.vote === current.get(participantId)?.vote,
+    const voteMatches = input.participantIds.filter(
+      (participantId) => previous.get(participantId)?.vote === current.get(participantId)?.vote,
     ).length;
     voteScores.push(voteMatches / input.participantIds.length);
     const votes = input.participantIds
@@ -141,11 +141,15 @@ export async function analyzeSemanticConvergence(input: {
   requiredStableChecks: number;
   provider: SimilarityProvider;
 }): Promise<ConvergenceReport> {
-  const positions = [...new Set(input.checks.flatMap((check) =>
-    check.map((snapshot) => snapshot.position)))];
+  const positions = [
+    ...new Set(input.checks.flatMap((check) => check.map((snapshot) => snapshot.position))),
+  ];
   const vectors = await input.provider.embed(positions);
   if (vectors.length !== positions.length) {
-    throw new AppError("embedding_count_mismatch", "Similarity provider returned the wrong vector count");
+    throw new AppError(
+      "embedding_count_mismatch",
+      "Similarity provider returned the wrong vector count",
+    );
   }
   const byPosition = new Map(positions.map((position, index) => [position, vectors[index] ?? []]));
   return analyzeConvergence({
@@ -153,10 +157,8 @@ export async function analyzeSemanticConvergence(input: {
     checks: input.checks,
     requiredStableChecks: input.requiredStableChecks,
     agreementThreshold: input.provider.agreementThreshold,
-    similarity: (left, right) => input.provider.similarity(
-      byPosition.get(left) ?? [],
-      byPosition.get(right) ?? [],
-    ),
+    similarity: (left, right) =>
+      input.provider.similarity(byPosition.get(left) ?? [], byPosition.get(right) ?? []),
   });
 }
 
@@ -165,6 +167,8 @@ export function shouldStopProtocol(
   report: ConvergenceReport | undefined,
   consensusReached: boolean,
 ): boolean {
-  return (policy === "impasse" && report?.impasse === true) ||
-    (policy === "qualified_decision" && consensusReached);
+  return (
+    (policy === "impasse" && report?.impasse === true) ||
+    (policy === "qualified_decision" && consensusReached)
+  );
 }

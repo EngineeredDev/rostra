@@ -15,7 +15,9 @@ const objectSchema = z.record(z.string(), z.json());
 
 function environment(overrides: Record<string, string>): Record<string, string> {
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
   );
   return { ...inherited, ...overrides };
 }
@@ -44,20 +46,30 @@ afterEach(async () => {
     if (!alive) break;
     await new Promise<void>((resolvePromise) => setTimeout(resolvePromise, 20));
   }
-  await Promise.all(roots.splice(0).map((root) => rm(root, {
-    recursive: true,
-    force: true,
-    maxRetries: 50,
-    retryDelay: 100,
-  })));
+  await Promise.all(
+    roots.splice(0).map((root) =>
+      rm(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 50,
+        retryDelay: 100,
+      }),
+    ),
+  );
 });
 
-async function fixture(): Promise<{ configPath: string; dataHome: string; env: Record<string, string> }> {
+async function fixture(): Promise<{
+  configPath: string;
+  dataHome: string;
+  env: Record<string, string>;
+}> {
   const root = await mkdtemp(join(tmpdir(), "rostra-e2e-"));
   roots.push(root);
   const dataHome = join(root, "data");
   const configPath = join(root, "config.yaml");
-  await writeFile(configPath, `
+  await writeFile(
+    configPath,
+    `
 version: 2
 adapters: {}
 model_registry: { models: [] }
@@ -79,7 +91,8 @@ jobs:
   wait_max_seconds: 10
 storage: { busy_timeout_ms: 1000 }
 decision_graph: {}
-`);
+`,
+  );
   return {
     configPath,
     dataHome,
@@ -112,10 +125,14 @@ const participants = [
 async function waitForStatus(client: Client, jobId: string, status: string): Promise<void> {
   const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
-    const job = objectSchema.parse((await client.callTool({
-      name: "get_deliberation",
-      arguments: { job_id: jobId },
-    })).structuredContent);
+    const job = objectSchema.parse(
+      (
+        await client.callTool({
+          name: "get_deliberation",
+          arguments: { job_id: jobId },
+        })
+      ).structuredContent,
+    );
     if (job.status === status) return;
     await new Promise<void>((resolvePromise) => setTimeout(resolvePromise, 20));
   }
@@ -130,78 +147,104 @@ describe("compiled durable MCP", () => {
     const tools = await firstClient.listTools();
     expect(tools.tools.map((tool) => tool.name).sort()).toEqual([...durableToolNames].sort());
 
-    const started = objectSchema.parse((await firstClient.callTool({
-      name: "start_deliberation",
-      arguments: {
-        question: "durable fake job",
-        working_directory: process.cwd(),
-        protocol: "quick",
-        committee: { mode: "explicit" },
-        participants,
-        idempotency_key: idempotencyKey,
-      },
-    })).structuredContent);
+    const started = objectSchema.parse(
+      (
+        await firstClient.callTool({
+          name: "start_deliberation",
+          arguments: {
+            question: "durable fake job",
+            working_directory: process.cwd(),
+            protocol: "quick",
+            committee: { mode: "explicit" },
+            participants,
+            idempotency_key: idempotencyKey,
+          },
+        })
+      ).structuredContent,
+    );
     expect(started).toHaveProperty("job_id");
     const jobId = z.uuid().parse(started.job_id);
     await firstClient.close();
 
     const secondClient = await connect(setup.env);
-    const terminal = objectSchema.parse((await secondClient.callTool({
-      name: "get_deliberation",
-      arguments: {
-        idempotency_key: idempotencyKey,
-        wait_for_terminal: true,
-        wait_timeout_seconds: 5,
-      },
-    })).structuredContent);
+    const terminal = objectSchema.parse(
+      (
+        await secondClient.callTool({
+          name: "get_deliberation",
+          arguments: {
+            idempotency_key: idempotencyKey,
+            wait_for_terminal: true,
+            wait_timeout_seconds: 5,
+          },
+        })
+      ).structuredContent,
+    );
     expect(terminal).toMatchObject({ job_id: jobId, status: "succeeded" });
     expect(terminal.result).toMatchObject({ fake: true, status: "partial" });
 
-    const repeated = objectSchema.parse((await secondClient.callTool({
-      name: "start_deliberation",
-      arguments: {
-        question: "durable fake job",
-        working_directory: process.cwd(),
-        protocol: "quick",
-        committee: { mode: "explicit" },
-        participants,
-        idempotency_key: idempotencyKey,
-      },
-    })).structuredContent);
+    const repeated = objectSchema.parse(
+      (
+        await secondClient.callTool({
+          name: "start_deliberation",
+          arguments: {
+            question: "durable fake job",
+            working_directory: process.cwd(),
+            protocol: "quick",
+            committee: { mode: "explicit" },
+            participants,
+            idempotency_key: idempotencyKey,
+          },
+        })
+      ).structuredContent,
+    );
     expect(repeated).toMatchObject({ job_id: jobId, deduplicated: true });
 
-    const cancellable = objectSchema.parse((await secondClient.callTool({
-      name: "start_deliberation",
-      arguments: {
-        question: "cancel this fake job",
-        working_directory: process.cwd(),
-        protocol: "quick",
-        committee: { mode: "explicit" },
-        participants,
-        force_new: true,
-      },
-    })).structuredContent);
+    const cancellable = objectSchema.parse(
+      (
+        await secondClient.callTool({
+          name: "start_deliberation",
+          arguments: {
+            question: "cancel this fake job",
+            working_directory: process.cwd(),
+            protocol: "quick",
+            committee: { mode: "explicit" },
+            participants,
+            force_new: true,
+          },
+        })
+      ).structuredContent,
+    );
     const cancelJobId = z.uuid().parse(cancellable.job_id);
     await waitForStatus(secondClient, cancelJobId, "running");
-    const cancellation = objectSchema.parse((await secondClient.callTool({
-      name: "cancel_deliberation",
-      arguments: { job_id: cancelJobId, reason: "e2e" },
-    })).structuredContent);
+    const cancellation = objectSchema.parse(
+      (
+        await secondClient.callTool({
+          name: "cancel_deliberation",
+          arguments: { job_id: cancelJobId, reason: "e2e" },
+        })
+      ).structuredContent,
+    );
     expect(cancellation).toMatchObject({ job_id: cancelJobId, status: "cancelling" });
-    const cancelled = objectSchema.parse((await secondClient.callTool({
-      name: "get_deliberation",
-      arguments: {
-        job_id: cancelJobId,
-        wait_for_terminal: true,
-        wait_timeout_seconds: 5,
-      },
-    })).structuredContent);
+    const cancelled = objectSchema.parse(
+      (
+        await secondClient.callTool({
+          name: "get_deliberation",
+          arguments: {
+            job_id: cancelJobId,
+            wait_for_terminal: true,
+            wait_timeout_seconds: 5,
+          },
+        })
+      ).structuredContent,
+    );
     expect(cancelled.status).toBe("cancelled");
     await secondClient.close();
 
     const databasePath = join(setup.dataHome, "rostra.sqlite");
     const db = new Database(databasePath, { readonly: true, fileMustExist: true });
-    const state = db.prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1").get();
+    const state = db
+      .prepare<[], { pid: number }>("SELECT pid FROM supervisor_state WHERE singleton = 1")
+      .get();
     db.close();
     if (state !== undefined) supervisors.add(state.pid);
   });

@@ -48,9 +48,11 @@ describe("http configuration", () => {
   });
 
   it("rejects an out-of-range port and unknown keys", async () => {
-    await expect(loadConfig(await write(`${base}http: { port: 70000 }\n`)))
-      .rejects.toMatchObject({ code: "invalid_config" });
-    await expect(loadConfig(await write(`${base}http: { bind: "0.0.0.0" }\n`)))
-      .rejects.toMatchObject({ code: "invalid_config" });
+    await expect(loadConfig(await write(`${base}http: { port: 70000 }\n`))).rejects.toMatchObject({
+      code: "invalid_config",
+    });
+    await expect(
+      loadConfig(await write(`${base}http: { bind: "0.0.0.0" }\n`)),
+    ).rejects.toMatchObject({ code: "invalid_config" });
   });
 });

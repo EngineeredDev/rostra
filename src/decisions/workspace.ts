@@ -29,11 +29,11 @@ export async function deriveWorkspaceIdentity(
 
   let canonicalRoot: string;
   try {
-    const { stdout } = await execFileAsync(
-      "git",
-      ["rev-parse", "--show-toplevel"],
-      { cwd: canonicalDirectory, encoding: "utf8", windowsHide: true },
-    );
+    const { stdout } = await execFileAsync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: canonicalDirectory,
+      encoding: "utf8",
+      windowsHide: true,
+    });
     canonicalRoot = await realpath(stdout.trim());
   } catch {
     canonicalRoot = canonicalDirectory;

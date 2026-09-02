@@ -11,22 +11,23 @@ export async function loadConfig(path?: string): Promise<Config> {
   try {
     raw = await readFile(configPath, "utf8");
   } catch (error) {
-    throw new AppError("config_not_found", `Cannot read configuration ${configPath}: ${errorMessage(error)}`);
+    throw new AppError(
+      "config_not_found",
+      `Cannot read configuration ${configPath}: ${errorMessage(error)}`,
+    );
   }
 
   let value: unknown;
   try {
     value = parse(raw);
   } catch (error) {
-    throw new AppError("invalid_config", `Cannot parse configuration ${configPath}: ${errorMessage(error)}`);
+    throw new AppError(
+      "invalid_config",
+      `Cannot parse configuration ${configPath}: ${errorMessage(error)}`,
+    );
   }
 
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "version" in value &&
-    value.version !== 2
-  ) {
+  if (typeof value === "object" && value !== null && "version" in value && value.version !== 2) {
     throw new AppError(
       "unsupported_config_version",
       `Configuration ${configPath} must use version 2`,

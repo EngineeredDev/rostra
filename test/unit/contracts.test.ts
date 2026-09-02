@@ -15,31 +15,37 @@ const participant = {
 
 describe("shared wire contracts", () => {
   it("normalizes participant identifiers and rejects duplicates", () => {
-    expect(() => startDeliberationInputSchema.parse({
-      question: "Choose a design",
-      working_directory: "/tmp/work",
-      protocol: "quick",
-      committee: { mode: "explicit" },
-      participants: [participant, { ...participant, participant_id: "Reviewer_A" }],
-    })).toThrow();
+    expect(() =>
+      startDeliberationInputSchema.parse({
+        question: "Choose a design",
+        working_directory: "/tmp/work",
+        protocol: "quick",
+        committee: { mode: "explicit" },
+        participants: [participant, { ...participant, participant_id: "Reviewer_A" }],
+      }),
+    ).toThrow();
   });
 
   it("requires exactly one committee branch", () => {
-    expect(() => startDeliberationInputSchema.parse({
-      question: "Choose a design",
-      working_directory: "/tmp/work",
-      protocol: "quick",
-      committee: { mode: "adaptive", size: 3, min_provider_families: 2 },
-      participants: [participant, { ...participant, participant_id: "reviewer_b" }],
-    })).toThrow();
+    expect(() =>
+      startDeliberationInputSchema.parse({
+        question: "Choose a design",
+        working_directory: "/tmp/work",
+        protocol: "quick",
+        committee: { mode: "adaptive", size: 3, min_provider_families: 2 },
+        participants: [participant, { ...participant, participant_id: "reviewer_b" }],
+      }),
+    ).toThrow();
   });
 
   it("requires exactly one decision selector", () => {
-    expect(() => queryDecisionsInputSchema.parse({
-      working_directory: "/tmp/work",
-      query_text: "database",
-      decision_id: "2b7c2a7b-0b57-4cb3-a136-086681f3e891",
-    })).toThrow();
+    expect(() =>
+      queryDecisionsInputSchema.parse({
+        working_directory: "/tmp/work",
+        query_text: "database",
+        decision_id: "2b7c2a7b-0b57-4cb3-a136-086681f3e891",
+      }),
+    ).toThrow();
   });
 
   it("extracts one terminal structured result", () => {

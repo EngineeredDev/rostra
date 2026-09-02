@@ -54,6 +54,7 @@ export function registerDeliberationResources(server: McpServer, store: JobStore
       description: "One durable deliberation job, the payload get_deliberation returns",
       mimeType: "application/json",
     },
-    (uri, variables) => jsonResource(uri, jobProjection(store.get(jobIdOf(variables)), false, store)),
+    (uri, variables) =>
+      jsonResource(uri, jobProjection(store.get(jobIdOf(variables)), false, store)),
   );
 }

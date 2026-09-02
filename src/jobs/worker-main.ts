@@ -14,7 +14,9 @@ const workerArgumentsSchema = z.strictObject({
   expectedVersion: z.number().int().nonnegative(),
 });
 
-export function parseWorkerArguments(argv: readonly string[]): z.infer<typeof workerArgumentsSchema> {
+export function parseWorkerArguments(
+  argv: readonly string[],
+): z.infer<typeof workerArgumentsSchema> {
   const values: Record<string, string> = {};
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
@@ -32,7 +34,6 @@ export function parseWorkerArguments(argv: readonly string[]): z.infer<typeof wo
     expectedVersion: Number(values["expected-version"]),
   });
 }
-
 
 async function main(): Promise<void> {
   const arguments_ = parseWorkerArguments(process.argv.slice(2));

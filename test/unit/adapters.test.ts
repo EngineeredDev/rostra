@@ -36,8 +36,17 @@ const cliConfig = {
 describe("adapter registry", () => {
   it("owns every supported adapter descriptor and rejects unknown configuration", () => {
     expect(AdapterRegistry.names()).toEqual([
-      "claude", "codex", "droid", "gemini", "llamacpp", "omp",
-      "ollama", "lmstudio", "openrouter", "nebius", "openai",
+      "claude",
+      "codex",
+      "droid",
+      "gemini",
+      "llamacpp",
+      "omp",
+      "ollama",
+      "lmstudio",
+      "openrouter",
+      "nebius",
+      "openai",
     ]);
     expect(() => validateAdapterConfigurations({ unknown: cliConfig })).toThrowError(
       expect.objectContaining({ code: "unknown_adapter" }),
@@ -46,23 +55,28 @@ describe("adapter registry", () => {
 
   it("gates host tools and passes only allowlisted environment variables", async () => {
     const runner = new CapturingRunner();
-    const registry = new AdapterRegistry({ codex: cliConfig }, {
-      processRunner: runner,
-      environment: {
-        PATH: "/bin",
-        HOME: "/home/test",
-        ALLOWED_SECRET: "allowed",
-        BLOCKED_SECRET: "blocked",
-        CLAUDECODE: "nested",
+    const registry = new AdapterRegistry(
+      { codex: cliConfig },
+      {
+        processRunner: runner,
+        environment: {
+          PATH: "/bin",
+          HOME: "/home/test",
+          ALLOWED_SECRET: "allowed",
+          BLOCKED_SECRET: "blocked",
+          CLAUDECODE: "nested",
+        },
       },
-    });
-    await expect(registry.invoke({
-      adapter: "codex",
-      model: "sol",
-      prompt: "answer",
-      workingDirectory: "/tmp",
-      allowHostTools: false,
-    })).rejects.toMatchObject({ code: "host_tools_not_allowed" });
+    );
+    await expect(
+      registry.invoke({
+        adapter: "codex",
+        model: "sol",
+        prompt: "answer",
+        workingDirectory: "/tmp",
+        allowHostTools: false,
+      }),
+    ).rejects.toMatchObject({ code: "host_tools_not_allowed" });
     expect(runner.input).toBeUndefined();
 
     const result = await registry.invoke({
@@ -72,7 +86,10 @@ describe("adapter registry", () => {
       workingDirectory: "/tmp",
       allowHostTools: true,
     });
-    expect(result).toMatchObject({ text: "adapter output", executionIsolation: "host_unrestricted" });
+    expect(result).toMatchObject({
+      text: "adapter output",
+      executionIsolation: "host_unrestricted",
+    });
     expect(runner.input?.env).toEqual({
       PATH: "/bin",
       HOME: "/home/test",
@@ -86,76 +103,105 @@ describe("adapter registry", () => {
     const resources: string[] = [];
     let calls = 0;
     const fetchMock: typeof fetch = (resource, init = {}) => {
-      resources.push(typeof resource === "string"
-        ? resource
-        : resource instanceof URL
-          ? resource.href
-          : resource.url);
+      resources.push(
+        typeof resource === "string"
+          ? resource
+          : resource instanceof URL
+            ? resource.href
+            : resource.url,
+      );
       requests.push(init);
       calls += 1;
-      return Promise.resolve(calls === 1
-        ? new Response("busy", { status: 503 })
-        : new Response(JSON.stringify({
-            id: "response-id",
-            object: "chat.completion",
-            choices: [{ message: { role: "assistant", content: "remote answer" }, finish_reason: "stop" }],
-          }), { status: 200, headers: { "content-type": "application/json" } }));
+      return Promise.resolve(
+        calls === 1
+          ? new Response("busy", { status: 503 })
+          : new Response(
+              JSON.stringify({
+                id: "response-id",
+                object: "chat.completion",
+                choices: [
+                  {
+                    message: { role: "assistant", content: "remote answer" },
+                    finish_reason: "stop",
+                  },
+                ],
+              }),
+              { status: 200, headers: { "content-type": "application/json" } },
+            ),
+      );
     };
-    const registry = new AdapterRegistry({
-      openai: {
-        kind: "http",
-        enabled: true,
-        base_url: "https://example.test",
-        endpoint: "/v1/chat/completions",
-        api_key_env: "OPENAI_API_KEY",
-        timeout_seconds: 30,
-        max_retries: 1,
-        family: "openai",
-        headers: {},
+    const registry = new AdapterRegistry(
+      {
+        openai: {
+          kind: "http",
+          enabled: true,
+          base_url: "https://example.test",
+          endpoint: "/v1/chat/completions",
+          api_key_env: "OPENAI_API_KEY",
+          timeout_seconds: 30,
+          max_retries: 1,
+          family: "openai",
+          headers: {},
+        },
       },
-    }, {
-      fetch: fetchMock,
-      environment: { OPENAI_API_KEY: "secret" },
-    });
-    await expect(registry.invoke({
-      adapter: "openai",
-      model: "model-a",
-      prompt: "answer",
-      workingDirectory: "/tmp",
-      allowHostTools: false,
-    })).resolves.toMatchObject({ text: "remote answer", executionIsolation: "builtin_confined" });
+      {
+        fetch: fetchMock,
+        environment: { OPENAI_API_KEY: "secret" },
+      },
+    );
+    await expect(
+      registry.invoke({
+        adapter: "openai",
+        model: "model-a",
+        prompt: "answer",
+        workingDirectory: "/tmp",
+        allowHostTools: false,
+      }),
+    ).resolves.toMatchObject({ text: "remote answer", executionIsolation: "builtin_confined" });
     expect(calls).toBe(2);
-    expect(resources).toEqual(["https://example.test/v1/chat/completions", "https://example.test/v1/chat/completions"]);
+    expect(resources).toEqual([
+      "https://example.test/v1/chat/completions",
+      "https://example.test/v1/chat/completions",
+    ]);
     expect(requests[0]?.headers).toMatchObject({ Authorization: "Bearer secret" });
   });
 
   it("preserves the OpenRouter API prefix", async () => {
     let requested = "";
-    const registry = new AdapterRegistry({
-      openrouter: {
-        kind: "http",
-        enabled: true,
-        base_url: "https://openrouter.ai/api",
-        endpoint: "/api/v1/chat/completions",
-        api_key_env: "OPENROUTER_API_KEY",
-        timeout_seconds: 30,
-        max_retries: 0,
-        family: "openrouter",
-        headers: {},
+    const registry = new AdapterRegistry(
+      {
+        openrouter: {
+          kind: "http",
+          enabled: true,
+          base_url: "https://openrouter.ai/api",
+          endpoint: "/api/v1/chat/completions",
+          api_key_env: "OPENROUTER_API_KEY",
+          timeout_seconds: 30,
+          max_retries: 0,
+          family: "openrouter",
+          headers: {},
+        },
       },
-    }, {
-      environment: { OPENROUTER_API_KEY: "secret" },
-      fetch: (resource) => {
-        requested = typeof resource === "string"
-          ? resource
-          : resource instanceof URL
-            ? resource.href
-            : resource.url;
-        return Promise.resolve(new Response(JSON.stringify({
-          choices: [{ message: { content: "answer" } }],
-        }), { status: 200 }));
+      {
+        environment: { OPENROUTER_API_KEY: "secret" },
+        fetch: (resource) => {
+          requested =
+            typeof resource === "string"
+              ? resource
+              : resource instanceof URL
+                ? resource.href
+                : resource.url;
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                choices: [{ message: { content: "answer" } }],
+              }),
+              { status: 200 },
+            ),
+          );
+        },
       },
-    });
+    );
     await registry.invoke({
       adapter: "openrouter",
       model: "model-a",

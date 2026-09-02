@@ -54,9 +54,10 @@ export async function resolveConfigPath(options: ConfigPathOptions = {}): Promis
   }
 
   const userConfig = resolveUserConfigPath(options);
-  const candidates = userConfig === homeConfig
-    ? [homeConfig, resolvePackagedConfigPath(options)]
-    : [userConfig, homeConfig, resolvePackagedConfigPath(options)];
+  const candidates =
+    userConfig === homeConfig
+      ? [homeConfig, resolvePackagedConfigPath(options)]
+      : [userConfig, homeConfig, resolvePackagedConfigPath(options)];
 
   for (const candidate of candidates) {
     if (await readable(candidate)) {

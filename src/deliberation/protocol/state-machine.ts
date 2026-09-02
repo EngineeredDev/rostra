@@ -92,7 +92,10 @@ export function reduceProtocol(state: ProtocolState, command: ProtocolCommand): 
   }
   if (command.type === "begin_stage") {
     if (state.status !== "ready") {
-      throw new AppError("invalid_protocol_transition", `Cannot begin ${stage.id} from ${state.status}`);
+      throw new AppError(
+        "invalid_protocol_transition",
+        `Cannot begin ${stage.id} from ${state.status}`,
+      );
     }
     return { ...state, status: "running" };
   }

@@ -46,38 +46,48 @@ const startShape = {
   participants: z.array(participantSchema).min(2).max(8).optional(),
 };
 
-export const startDeliberationInputSchema = z.strictObject(startShape).superRefine((value, context) => {
-  const explicit = value.committee.mode === "explicit";
-  if (explicit !== (value.participants !== undefined)) {
-    context.addIssue({
-      code: "custom",
-      message: explicit
-        ? "Explicit committees require participants"
-        : "Adaptive committees prohibit participants",
-      path: ["participants"],
-    });
-  }
-  if (value.participants !== undefined) {
-    const seen = new Set<string>();
-    for (const participant of value.participants) {
-      if (seen.has(participant.participant_id)) {
-        context.addIssue({
-          code: "custom",
-          message: `Duplicate participant_id: ${participant.participant_id}`,
-          path: ["participants"],
-        });
-      }
-      seen.add(participant.participant_id);
+export const startDeliberationInputSchema = z
+  .strictObject(startShape)
+  .superRefine((value, context) => {
+    const explicit = value.committee.mode === "explicit";
+    if (explicit !== (value.participants !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        message: explicit
+          ? "Explicit committees require participants"
+          : "Adaptive committees prohibit participants",
+        path: ["participants"],
+      });
     }
-  }
-  const optionIds = value.decision_options?.map((option) => option.id) ?? [];
-  if (new Set(optionIds).size !== optionIds.length) {
-    context.addIssue({ code: "custom", message: "Decision option IDs must be unique", path: ["decision_options"] });
-  }
-  if (new Set(value.domain_tags).size !== value.domain_tags.length) {
-    context.addIssue({ code: "custom", message: "Domain tags must be unique", path: ["domain_tags"] });
-  }
-});
+    if (value.participants !== undefined) {
+      const seen = new Set<string>();
+      for (const participant of value.participants) {
+        if (seen.has(participant.participant_id)) {
+          context.addIssue({
+            code: "custom",
+            message: `Duplicate participant_id: ${participant.participant_id}`,
+            path: ["participants"],
+          });
+        }
+        seen.add(participant.participant_id);
+      }
+    }
+    const optionIds = value.decision_options?.map((option) => option.id) ?? [];
+    if (new Set(optionIds).size !== optionIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Decision option IDs must be unique",
+        path: ["decision_options"],
+      });
+    }
+    if (new Set(value.domain_tags).size !== value.domain_tags.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Domain tags must be unique",
+        path: ["domain_tags"],
+      });
+    }
+  });
 
 export const jobSubmissionSchema = z.strictObject({
   status: jobStatusSchema,
@@ -119,14 +129,20 @@ const jobSelectorShape = {
   idempotency_key: z.string().trim().min(1).optional(),
 };
 
-export const getDeliberationInputSchema = z.strictObject({
-  ...jobSelectorShape,
-  wait_for_terminal: z.boolean().default(false),
-  wait_timeout_seconds: z.number().positive().optional(),
-  include_attempts: z.boolean().default(false),
-}).refine((value) => Number(value.job_id !== undefined) + Number(value.idempotency_key !== undefined) === 1, {
-  message: "Exactly one job selector is required",
-});
+export const getDeliberationInputSchema = z
+  .strictObject({
+    ...jobSelectorShape,
+    wait_for_terminal: z.boolean().default(false),
+    wait_timeout_seconds: z.number().positive().optional(),
+    include_attempts: z.boolean().default(false),
+  })
+  .refine(
+    (value) =>
+      Number(value.job_id !== undefined) + Number(value.idempotency_key !== undefined) === 1,
+    {
+      message: "Exactly one job selector is required",
+    },
+  );
 
 export const tailDeliberationInputSchema = z.strictObject({
   job_id: uuidSchema,
@@ -169,14 +185,16 @@ const decisionQueryCommon = {
   threshold: z.number().min(0).max(1).optional(),
 };
 
-export const queryDecisionsInputSchema = z.strictObject(decisionQueryCommon).refine(
-  (value) =>
-    Number(value.query_text !== undefined) +
-      Number(value.decision_id !== undefined) +
-      Number(value.continuation_id !== undefined) ===
-    1,
-  { message: "Exactly one decision selector is required" },
-);
+export const queryDecisionsInputSchema = z
+  .strictObject(decisionQueryCommon)
+  .refine(
+    (value) =>
+      Number(value.query_text !== undefined) +
+        Number(value.decision_id !== undefined) +
+        Number(value.continuation_id !== undefined) ===
+      1,
+    { message: "Exactly one decision selector is required" },
+  );
 
 export const listStaleDecisionsInputSchema = z.strictObject({
   working_directory: nonemptyStringSchema,
@@ -184,24 +202,26 @@ export const listStaleDecisionsInputSchema = z.strictObject({
   limit: z.number().int().min(1).max(100).default(20),
 });
 
-export const recordDecisionOutcomeInputSchema = z.strictObject({
-  working_directory: nonemptyStringSchema,
-  decision_id: uuidSchema,
-  status: z.enum(["confirmed", "disconfirmed", "mixed", "superseded", "unknown"]),
-  observed_at: z.iso.datetime(),
-  measurements: z.record(z.string(), z.json()),
-  notes: nonemptyStringSchema.optional(),
-  superseding_decision_id: uuidSchema.optional(),
-}).superRefine((value, context) => {
-  const requiresSuperseding = value.status === "superseded";
-  if (requiresSuperseding !== (value.superseding_decision_id !== undefined)) {
-    context.addIssue({
-      code: "custom",
-      message: "superseding_decision_id is required only for superseded outcomes",
-      path: ["superseding_decision_id"],
-    });
-  }
-});
+export const recordDecisionOutcomeInputSchema = z
+  .strictObject({
+    working_directory: nonemptyStringSchema,
+    decision_id: uuidSchema,
+    status: z.enum(["confirmed", "disconfirmed", "mixed", "superseded", "unknown"]),
+    observed_at: z.iso.datetime(),
+    measurements: z.record(z.string(), z.json()),
+    notes: nonemptyStringSchema.optional(),
+    superseding_decision_id: uuidSchema.optional(),
+  })
+  .superRefine((value, context) => {
+    const requiresSuperseding = value.status === "superseded";
+    if (requiresSuperseding !== (value.superseding_decision_id !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        message: "superseding_decision_id is required only for superseded outcomes",
+        path: ["superseding_decision_id"],
+      });
+    }
+  });
 
 export const reviewDecisionChangeInputSchema = z.strictObject({
   working_directory: nonemptyStringSchema,
@@ -237,19 +257,52 @@ export const reviewDecisionChangeOutputSchema = z.strictObject({
 });
 
 export const toolContracts = {
-  start_deliberation: { input: startDeliberationInputSchema, output: z.union([jobSubmissionSchema, errorEnvelopeSchema]) },
-  list_deliberations: { input: listDeliberationsInputSchema, output: z.union([listDeliberationsOutputSchema, errorEnvelopeSchema]) },
-  get_deliberation: { input: getDeliberationInputSchema, output: z.union([z.record(z.string(), z.json()), errorEnvelopeSchema]) },
-  tail_deliberation: { input: tailDeliberationInputSchema, output: z.union([z.record(z.string(), z.json()), errorEnvelopeSchema]) },
-  cancel_deliberation: { input: cancelDeliberationInputSchema, output: z.union([jobActionSchema, errorEnvelopeSchema]) },
-  resume_deliberation: { input: resumeDeliberationInputSchema, output: z.union([jobActionSchema, errorEnvelopeSchema]) },
+  start_deliberation: {
+    input: startDeliberationInputSchema,
+    output: z.union([jobSubmissionSchema, errorEnvelopeSchema]),
+  },
+  list_deliberations: {
+    input: listDeliberationsInputSchema,
+    output: z.union([listDeliberationsOutputSchema, errorEnvelopeSchema]),
+  },
+  get_deliberation: {
+    input: getDeliberationInputSchema,
+    output: z.union([z.record(z.string(), z.json()), errorEnvelopeSchema]),
+  },
+  tail_deliberation: {
+    input: tailDeliberationInputSchema,
+    output: z.union([z.record(z.string(), z.json()), errorEnvelopeSchema]),
+  },
+  cancel_deliberation: {
+    input: cancelDeliberationInputSchema,
+    output: z.union([jobActionSchema, errorEnvelopeSchema]),
+  },
+  resume_deliberation: {
+    input: resumeDeliberationInputSchema,
+    output: z.union([jobActionSchema, errorEnvelopeSchema]),
+  },
   list_models: { input: listModelsInputSchema, output: z.record(z.string(), z.json()) },
-  set_session_models: { input: setSessionModelsInputSchema, output: z.record(z.string(), z.json()) },
-  get_quality_metrics: { input: getQualityMetricsInputSchema, output: z.record(z.string(), z.json()) },
+  set_session_models: {
+    input: setSessionModelsInputSchema,
+    output: z.record(z.string(), z.json()),
+  },
+  get_quality_metrics: {
+    input: getQualityMetricsInputSchema,
+    output: z.record(z.string(), z.json()),
+  },
   query_decisions: { input: queryDecisionsInputSchema, output: z.record(z.string(), z.json()) },
-  list_stale_decisions: { input: listStaleDecisionsInputSchema, output: z.record(z.string(), z.json()) },
-  record_decision_outcome: { input: recordDecisionOutcomeInputSchema, output: z.record(z.string(), z.json()) },
-  review_decision_change: { input: reviewDecisionChangeInputSchema, output: z.union([reviewDecisionChangeOutputSchema, errorEnvelopeSchema]) },
+  list_stale_decisions: {
+    input: listStaleDecisionsInputSchema,
+    output: z.record(z.string(), z.json()),
+  },
+  record_decision_outcome: {
+    input: recordDecisionOutcomeInputSchema,
+    output: z.record(z.string(), z.json()),
+  },
+  review_decision_change: {
+    input: reviewDecisionChangeInputSchema,
+    output: z.union([reviewDecisionChangeOutputSchema, errorEnvelopeSchema]),
+  },
 } as const;
 
 export type StartDeliberationInput = z.infer<typeof startDeliberationInputSchema>;

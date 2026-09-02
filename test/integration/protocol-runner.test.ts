@@ -45,9 +45,24 @@ describe("configured protocol runner", () => {
       },
       model_registry: {
         models: [
-          { id: "model-a", adapter: "openai", capabilities: ["analysis"], provider_family: "openai" },
-          { id: "model-b", adapter: "openai", capabilities: ["analysis"], provider_family: "openai" },
-          { id: "model-c", adapter: "openai", capabilities: ["analysis"], provider_family: "openai" },
+          {
+            id: "model-a",
+            adapter: "openai",
+            capabilities: ["analysis"],
+            provider_family: "openai",
+          },
+          {
+            id: "model-b",
+            adapter: "openai",
+            capabilities: ["analysis"],
+            provider_family: "openai",
+          },
+          {
+            id: "model-c",
+            adapter: "openai",
+            capabilities: ["analysis"],
+            provider_family: "openai",
+          },
         ],
       },
       defaults: { protocol: "quick" },
@@ -103,20 +118,24 @@ describe("configured protocol runner", () => {
       name: "set_session_models",
       arguments: { models: { openai: "model-b" } },
     });
-    const started = z.object({ job_id: z.uuid() }).parse((await mcpClient.callTool({
-      name: "start_deliberation",
-      arguments: {
-        question: "Choose an option",
-        working_directory: root,
-        protocol: "quick",
-        committee: { mode: "adaptive", size: 2, min_provider_families: 1 },
-        allow_unknown_cost: true,
-        decision_options: [
-          { id: "option-a", label: "Option A" },
-          { id: "option-b", label: "Option B" },
-        ],
-      },
-    })).structuredContent);
+    const started = z.object({ job_id: z.uuid() }).parse(
+      (
+        await mcpClient.callTool({
+          name: "start_deliberation",
+          arguments: {
+            question: "Choose an option",
+            working_directory: root,
+            protocol: "quick",
+            committee: { mode: "adaptive", size: 2, min_provider_families: 1 },
+            allow_unknown_cost: true,
+            decision_options: [
+              { id: "option-a", label: "Option A" },
+              { id: "option-b", label: "Option B" },
+            ],
+          },
+        })
+      ).structuredContent,
+    );
     const submitted = store.get(started.job_id);
     expect(submitted.request.session_models).toEqual({ openai: "model-b" });
     await Promise.all([mcpClient.close(), mcpServer.close()]);
@@ -135,21 +154,33 @@ describe("configured protocol runner", () => {
     let modelCalls = 0;
     let embeddingCalls = 0;
     const fetchMock: typeof fetch = (resource, init = {}) => {
-      const url = resource instanceof URL ? resource.href : typeof resource === "string" ? resource : resource.url;
+      const url =
+        resource instanceof URL
+          ? resource.href
+          : typeof resource === "string"
+            ? resource
+            : resource.url;
       if (url.includes("embeddings.test")) {
         embeddingCalls += 1;
-        const body = z.object({ input: z.array(z.string()) }).parse(
-          JSON.parse(typeof init.body === "string" ? init.body : "{}"),
+        const body = z
+          .object({ input: z.array(z.string()) })
+          .parse(JSON.parse(typeof init.body === "string" ? init.body : "{}"));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: body.input.map((text, index) => ({
+                index,
+                embedding: text.includes("model-b") || text === "option-b" ? [0, 1] : [1, 0],
+              })),
+            }),
+            { status: 200 },
+          ),
         );
-        return Promise.resolve(new Response(JSON.stringify({
-          data: body.input.map((text, index) => ({
-            index,
-            embedding: text.includes("model-b") || text === "option-b" ? [0, 1] : [1, 0],
-          })),
-        }), { status: 200 }));
       }
       modelCalls += 1;
-      const body = requestBodySchema.parse(JSON.parse(typeof init.body === "string" ? init.body : "{}"));
+      const body = requestBodySchema.parse(
+        JSON.parse(typeof init.body === "string" ? init.body : "{}"),
+      );
       const prompt = body.messages[0]?.content ?? "";
       const claimId = claimIds[body.model];
       if (claimId === undefined) throw new Error(`Unexpected model: ${body.model}`);
@@ -159,16 +190,22 @@ describe("configured protocol runner", () => {
         content = `Ballot\nROSTRA_RESULT: {"option_id":"option-a","confidence":0.9,"rationale":"${body.model}","continue_debate":false}`;
       } else if (prompt.includes("evidence_collection")) {
         const evidenceId = /"evidence_id":"([^"]+)"/u.exec(prompt)?.[1];
-        content = evidenceId === undefined
-          ? `ROSTRA_TOOL_REQUEST: {"name":"read_file","arguments":{"path":"evidence.txt"},"claim_id":"${claimId}","polarity":"supports"}`
-          : `Evidence verified\nROSTRA_RESULT: {"claim_id":"${claimId}","evidence_requests":["read evidence.txt"],"evidence_ids":["${evidenceId}"],"assessment":"verified evidence"}`;
+        content =
+          evidenceId === undefined
+            ? `ROSTRA_TOOL_REQUEST: {"name":"read_file","arguments":{"path":"evidence.txt"},"claim_id":"${claimId}","polarity":"supports"}`
+            : `Evidence verified\nROSTRA_RESULT: {"claim_id":"${claimId}","evidence_requests":["read evidence.txt"],"evidence_ids":["${evidenceId}"],"assessment":"verified evidence"}`;
       } else {
         const recommendation = body.model === "model-a" ? "option-a" : "option-b";
         content = `Analysis\nROSTRA_RESULT: {"claims":[{"claim_id":"${claimId}","type":"fact","text":"verified ${body.model}","confidence":0.9}],"assumptions":["bounded"],"recommendation":"${recommendation}","confidence":0.9,"predictions":[]}`;
       }
-      return Promise.resolve(new Response(JSON.stringify({
-        choices: [{ message: { content } }],
-      }), { status: 200 }));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content } }],
+          }),
+          { status: 200 },
+        ),
+      );
     };
     const runner = new ConfiguredProtocolRunner({
       config,
@@ -202,17 +239,21 @@ describe("configured protocol runner", () => {
     expect(finalBallotPrompt).toContain("- option-b: Option B");
     expect(finalBallotPrompt).toContain("Participant adaptive_1:");
     expect(store.attempts(submitted.job_id)).toHaveLength(8);
-    expect(z.object({ next_stage: z.number() }).parse(
-      store.latestCheckpoint(submitted.job_id),
-    ).next_stage).toBe(4);
+    expect(
+      z.object({ next_stage: z.number() }).parse(store.latestCheckpoint(submitted.job_id))
+        .next_stage,
+    ).toBe(4);
     expect(result.decision.evidence).toHaveLength(2);
     expect(result.decision.evidence.map((evidence) => evidence.locator)).toEqual([
       "evidence.txt",
       "evidence.txt",
     ]);
-    expect(result.decision.evidence.map((evidence) => evidence.claim_id).sort()).toEqual(
-      Object.values(claimIds).sort(),
-    );
+    expect(
+      result.decision.evidence
+        .map((evidence) => evidence.claim_id)
+        .filter((claimId): claimId is string => claimId !== undefined)
+        .sort((left, right) => left.localeCompare(right)),
+    ).toEqual(Object.values(claimIds).sort((left, right) => left.localeCompare(right)));
     for (let index = 0; index < 20; index += 1) {
       store.recordQuality({
         adapter: "openai",
@@ -225,9 +266,7 @@ describe("configured protocol runner", () => {
     const replay = await runner.execute(running, new RunContext(running.job_id));
     const replayResult = deliberationResultSchema.parse(replay.result);
     expect(replayResult.decision.participants).toEqual(result.decision.participants);
-    expect(replayResult.decision.committee_selection).toEqual(
-      result.decision.committee_selection,
-    );
+    expect(replayResult.decision.committee_selection).toEqual(result.decision.committee_selection);
     expect(store.attempts(submitted.job_id)).toHaveLength(8);
     expect(modelCalls).toBe(8);
     if (replay.publication === undefined) throw new Error("Expected publication");
@@ -237,32 +276,36 @@ describe("configured protocol runner", () => {
     const leaseToken = current.lease_token;
     const invalidPacket = decisionPacketSchema.parse({
       ...publication.packet,
-      evidence: [{
-        evidence_id: "33333333-3333-4333-8333-333333333333",
-        claim_id: "44444444-4444-4444-8444-444444444444",
-        source_type: "file",
-        canonical_uri: "missing.txt",
-        content_hash: "deadbeef",
-        captured_at_ms: 1,
-        tool_or_adapter: "read_file",
-        execution_isolation: "builtin_confined",
-        redaction_status: "none",
-        polarity: "supports",
-      }],
+      evidence: [
+        {
+          evidence_id: "33333333-3333-4333-8333-333333333333",
+          claim_id: "44444444-4444-4444-8444-444444444444",
+          source_type: "file",
+          canonical_uri: "missing.txt",
+          content_hash: "deadbeef",
+          captured_at_ms: 1,
+          tool_or_adapter: "read_file",
+          execution_isolation: "builtin_confined",
+          redaction_status: "none",
+          polarity: "supports",
+        },
+      ],
     });
-    expect(() => store.commitDecisionResult({
-      jobId: current.job_id,
-      expectedVersion: current.row_version,
-      leaseToken,
-      workspaceId: publication.workspaceId,
-      canonicalRoot: publication.canonicalRoot,
-      requestFingerprint: publication.requestFingerprint,
-      packet: invalidPacket,
-      summary: publication.summary,
-      resultStatus: replay.status,
-      resultJson: replay.result,
-      transcriptPath: publication.transcriptPath,
-    })).toThrow();
+    expect(() =>
+      store.commitDecisionResult({
+        jobId: current.job_id,
+        expectedVersion: current.row_version,
+        leaseToken,
+        workspaceId: publication.workspaceId,
+        canonicalRoot: publication.canonicalRoot,
+        requestFingerprint: publication.requestFingerprint,
+        packet: invalidPacket,
+        summary: publication.summary,
+        resultStatus: replay.status,
+        resultJson: replay.result,
+        transcriptPath: publication.transcriptPath,
+      }),
+    ).toThrow();
     expect(store.get(current.job_id).status).toBe("running");
     const committed = store.commitDecisionResult({
       jobId: current.job_id,
@@ -277,10 +320,7 @@ describe("configured protocol runner", () => {
       resultJson: replay.result,
       transcriptPath: publication.transcriptPath,
     });
-    await rename(
-      publication.temporaryTranscriptPath,
-      publication.transcriptPath,
-    );
+    await rename(publication.temporaryTranscriptPath, publication.transcriptPath);
     expect(committed).toMatchObject({
       status: "succeeded",
       decision_id: replayResult.decision.decision_id,

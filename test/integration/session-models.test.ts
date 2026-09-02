@@ -68,7 +68,10 @@ async function connect(shared: McpRuntime): Promise<Client> {
 describe("session model overrides", () => {
   it("survives across separate tool round trips", async () => {
     const client = await connect(await runtime());
-    await client.callTool({ name: "set_session_models", arguments: { models: { codex: "sol-mini" } } });
+    await client.callTool({
+      name: "set_session_models",
+      arguments: { models: { codex: "sol-mini" } },
+    });
     const listed = await client.callTool({ name: "list_models", arguments: {} });
 
     expect(listed.structuredContent).toMatchObject({ session_models: { codex: "sol-mini" } });
@@ -77,7 +80,10 @@ describe("session model overrides", () => {
   it("is process scoped, so a second server instance over the same runtime sees it", async () => {
     const shared = await runtime();
     const first = await connect(shared);
-    await first.callTool({ name: "set_session_models", arguments: { models: { codex: "sol-mini" } } });
+    await first.callTool({
+      name: "set_session_models",
+      arguments: { models: { codex: "sol-mini" } },
+    });
 
     const second = await connect(shared);
     const listed = await second.callTool({ name: "list_models", arguments: {} });

@@ -18,7 +18,6 @@ async function temporaryDatabase(): Promise<string> {
   return join(root, "rostra.sqlite");
 }
 
-
 describe("single marked storage", () => {
   it("initializes missing and zero-byte databases with project markers", async () => {
     for (const precreate of [false, true]) {
@@ -29,7 +28,9 @@ describe("single marked storage", () => {
       expect(db.pragma("user_version", { simple: true })).toBe(USER_VERSION);
       expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
       expect(db.pragma("synchronous", { simple: true })).toBe(2);
-      expect(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'").get()).toBeDefined();
+      expect(
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'").get(),
+      ).toBeDefined();
       db.close();
     }
   });
@@ -39,11 +40,17 @@ describe("single marked storage", () => {
     const legacy = new Database(path);
     legacy.exec("CREATE TABLE legacy(value TEXT)");
     legacy.close();
-    const beforeDigest = createHash("sha256").update(await readFile(path)).digest("hex");
+    const beforeDigest = createHash("sha256")
+      .update(await readFile(path))
+      .digest("hex");
     const beforeMtime = (await stat(path)).mtimeMs;
 
     await expect(openStorage(path)).rejects.toMatchObject({ code: "incompatible_database" });
-    expect(createHash("sha256").update(await readFile(path)).digest("hex")).toBe(beforeDigest);
+    expect(
+      createHash("sha256")
+        .update(await readFile(path))
+        .digest("hex"),
+    ).toBe(beforeDigest);
     expect((await stat(path)).mtimeMs).toBe(beforeMtime);
     await expect(stat(`${path}-wal`)).rejects.toMatchObject({ code: "ENOENT" });
     await expect(stat(`${path}-shm`)).rejects.toMatchObject({ code: "ENOENT" });

@@ -24,7 +24,9 @@ export async function computeBuildId(): Promise<string> {
   const modulePath = fileURLToPath(import.meta.url);
   const distRoot = dirname(modulePath);
   const packageRoot = dirname(distRoot);
-  const packageValue = packageSchema.parse(JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")));
+  const packageValue = packageSchema.parse(
+    JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")),
+  );
   const hash = createHash("sha256");
   for (const path of await manifestFiles(distRoot)) {
     hash.update(relative(distRoot, path));
@@ -36,5 +38,7 @@ export async function computeBuildId(): Promise<string> {
 }
 
 export async function computeConfigDigest(path: string): Promise<string> {
-  return createHash("sha256").update(await readFile(path)).digest("hex");
+  return createHash("sha256")
+    .update(await readFile(path))
+    .digest("hex");
 }

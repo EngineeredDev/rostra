@@ -107,7 +107,8 @@ export class DecisionCiReviewer {
     ]);
     const paths = await changedPaths(workspace.canonicalRoot, baseSha, headSha);
     const changed = new Set(paths);
-    const evidenceRows = this.#db.prepare<[string], EvidenceChangeRow>(`
+    const evidenceRows = this.#db
+      .prepare<[string], EvidenceChangeRow>(`
       SELECT
         c.decision_id, c.id AS claim_id, e.id AS evidence_id, c.claim_type,
         e.canonical_uri, e.locator, ce.polarity, ce.is_critical, d.outcome_status
@@ -117,7 +118,8 @@ export class DecisionCiReviewer {
       JOIN decisions d ON d.id = c.decision_id AND d.workspace_id = c.workspace_id
       WHERE ce.workspace_id = ? AND e.source_type = 'file'
       ORDER BY c.decision_id, c.id, e.id
-    `).all(workspace.id);
+    `)
+      .all(workspace.id);
     const findings: DecisionFinding[] = [];
     const affectedDecisions = new Set<string>();
     for (const evidence of evidenceRows) {
@@ -130,9 +132,10 @@ export class DecisionCiReviewer {
         continue;
       }
       affectedDecisions.add(evidence.decision_id);
-      const line = evidence.locator === null
-        ? undefined
-        : Number.parseInt(evidence.locator.replace(/^L/u, ""), 10);
+      const line =
+        evidence.locator === null
+          ? undefined
+          : Number.parseInt(evidence.locator.replace(/^L/u, ""), 10);
       findings.push({
         finding_type: "stale_evidence",
         severity: evidence.is_critical === 1 ? "error" : "warning",
@@ -172,12 +175,14 @@ export class DecisionCiReviewer {
       }
     }
 
-    const relations = this.#db.prepare<[string], RelationRow>(`
+    const relations = this.#db
+      .prepare<[string], RelationRow>(`
       SELECT id, source_decision_id, target_decision_id, relation_type
       FROM decision_relations
       WHERE workspace_id = ? AND relation_type IN ('contradicts', 'supersedes')
       ORDER BY relation_type, source_decision_id, target_decision_id
-    `).all(workspace.id);
+    `)
+      .all(workspace.id);
     for (const relation of relations) {
       if (
         !affectedDecisions.has(relation.source_decision_id) &&
@@ -186,9 +191,10 @@ export class DecisionCiReviewer {
         continue;
       }
       findings.push({
-        finding_type: relation.relation_type === "contradicts"
-          ? "conflicting_decision"
-          : "superseded_precedent",
+        finding_type:
+          relation.relation_type === "contradicts"
+            ? "conflicting_decision"
+            : "superseded_precedent",
         severity: relation.relation_type === "contradicts" ? "error" : "warning",
         decision_id: relation.target_decision_id,
         changed_paths: paths,
@@ -197,15 +203,17 @@ export class DecisionCiReviewer {
           source_decision_id: relation.source_decision_id,
           target_decision_id: relation.target_decision_id,
         },
-        remediation: relation.relation_type === "contradicts"
-          ? "Resolve the contradiction before you accept the change."
-          : "Use the superseding decision as the current precedent.",
+        remediation:
+          relation.relation_type === "contradicts"
+            ? "Resolve the contradiction before you accept the change."
+            : "Use the superseding decision as the current precedent.",
       });
     }
-    findings.sort((left, right) =>
-      left.finding_type.localeCompare(right.finding_type) ||
-      left.decision_id.localeCompare(right.decision_id) ||
-      (left.claim_id ?? "").localeCompare(right.claim_id ?? ""),
+    findings.sort(
+      (left, right) =>
+        left.finding_type.localeCompare(right.finding_type) ||
+        left.decision_id.localeCompare(right.decision_id) ||
+        (left.claim_id ?? "").localeCompare(right.claim_id ?? ""),
     );
     const thresholdMet = findings.some(
       (finding) => severityValue(finding.severity) >= thresholdValue(input.fail_on),
@@ -219,42 +227,48 @@ export class DecisionCiReviewer {
     };
     const reviewId = randomUUID();
     const nowMs = Date.now();
-    this.#db.transaction(() => {
-      this.#db.prepare(`
+    this.#db
+      .transaction(() => {
+        this.#db
+          .prepare(`
         INSERT INTO reviews(id, workspace_id, decision_id, base_sha, head_sha, findings_json, created_at_ms)
         SELECT ?, ?, d.id, ?, ?, ?, ? FROM decisions d
         WHERE d.workspace_id = ? ORDER BY d.created_at_ms, d.id LIMIT 1
-      `).run(
-        reviewId,
-        workspace.id,
-        baseSha,
-        headSha,
-        canonicalJson(parseJsonValue(findings)),
-        nowMs,
-        workspace.id,
-      );
-      for (const finding of findings) {
-        this.#db.prepare(`
+      `)
+          .run(
+            reviewId,
+            workspace.id,
+            baseSha,
+            headSha,
+            canonicalJson(parseJsonValue(findings)),
+            nowMs,
+            workspace.id,
+          );
+        for (const finding of findings) {
+          this.#db
+            .prepare(`
           INSERT INTO ci_findings(
             id, workspace_id, review_id, decision_id, claim_id, evidence_id,
             finding_type, severity, changed_paths_json, provenance_json, remediation, created_at_ms
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          randomUUID(),
-          workspace.id,
-          reviewId,
-          finding.decision_id,
-          finding.claim_id ?? null,
-          finding.evidence_id ?? null,
-          finding.finding_type,
-          finding.severity,
-          canonicalJson(parseJsonValue(finding.changed_paths)),
-          canonicalJson(parseJsonValue(finding.provenance)),
-          finding.remediation,
-          nowMs,
-        );
-      }
-    }).immediate();
+        `)
+            .run(
+              randomUUID(),
+              workspace.id,
+              reviewId,
+              finding.decision_id,
+              finding.claim_id ?? null,
+              finding.evidence_id ?? null,
+              finding.finding_type,
+              finding.severity,
+              canonicalJson(parseJsonValue(finding.changed_paths)),
+              canonicalJson(parseJsonValue(finding.provenance)),
+              finding.remediation,
+              nowMs,
+            );
+        }
+      })
+      .immediate();
     return result;
   }
 }

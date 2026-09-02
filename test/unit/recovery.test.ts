@@ -38,10 +38,13 @@ describe("stale job recovery", () => {
     ]);
     expect(store.get(dispatchJob.job_id).status).toBe("queued");
 
-    const runningJob = store.submit({ ...request, question: "checkpoint" }, {
-      forceNew: true,
-      nowMs: 201,
-    });
+    const runningJob = store.submit(
+      { ...request, question: "checkpoint" },
+      {
+        forceNew: true,
+        nowMs: 201,
+      },
+    );
     const claimed = store.claimNext("build", "config", 202);
     if (claimed === undefined || claimed.job_id !== dispatchJob.job_id) {
       throw new Error("Expected the requeued dispatch first");

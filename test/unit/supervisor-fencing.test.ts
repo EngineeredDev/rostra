@@ -51,16 +51,18 @@ describe("supervisor fencing", () => {
       decision_graph: {},
     });
     const store = new JobStore(db, { dedupeSuccessMs: 1_000, leaseMs: 10_000 });
-    store.submit(startDeliberationInputSchema.parse({
-      question: "active old work",
-      working_directory: root,
-      protocol: "quick",
-      committee: { mode: "explicit" },
-      participants: [
-        { participant_id: "a", cli: "fake", model: "a" },
-        { participant_id: "b", cli: "fake", model: "b" },
-      ],
-    }));
+    store.submit(
+      startDeliberationInputSchema.parse({
+        question: "active old work",
+        working_directory: root,
+        protocol: "quick",
+        committee: { mode: "explicit" },
+        participants: [
+          { participant_id: "a", cli: "fake", model: "a" },
+          { participant_id: "b", cli: "fake", model: "b" },
+        ],
+      }),
+    );
     const claimed = store.claimNext("old-build", "old-config");
     if (claimed === undefined) throw new Error("Expected claim");
     store.handshakeWorker(claimed.job_id, claimed.dispatch_token, claimed.row_version);
@@ -71,15 +73,17 @@ describe("supervisor fencing", () => {
       ) VALUES (1, 'old-owner', 123, 100, 'old-build', 'old-config', 'ready', 100, 100)
     `).run();
     const identity = new FixedIdentityProvider();
-    await expect(ensureSupervisor({
-      db,
-      databasePath,
-      configPath: join(root, "config.yaml"),
-      config,
-      buildId: "new-build",
-      configDigest: "new-config",
-      identityProvider: identity,
-    })).rejects.toMatchObject({ code: "executor_version_mismatch" });
+    await expect(
+      ensureSupervisor({
+        db,
+        databasePath,
+        configPath: join(root, "config.yaml"),
+        config,
+        buildId: "new-build",
+        configDigest: "new-config",
+        identityProvider: identity,
+      }),
+    ).rejects.toMatchObject({ code: "executor_version_mismatch" });
     expect(identity.terminated).toBe(false);
     store.close();
   });

@@ -115,15 +115,18 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
     },
     async (input) => {
       try {
-        const submission = runtime.store.submit({
-          ...input,
-          session_models: Object.fromEntries(sessionModels),
-        }, {
-          ...(input.idempotency_key === undefined
-            ? {}
-            : { idempotencyKey: input.idempotency_key }),
-          forceNew: input.force_new,
-        });
+        const submission = runtime.store.submit(
+          {
+            ...input,
+            session_models: Object.fromEntries(sessionModels),
+          },
+          {
+            ...(input.idempotency_key === undefined
+              ? {}
+              : { idempotencyKey: input.idempotency_key }),
+            forceNew: input.force_new,
+          },
+        );
         await runtime.ensureSupervisor();
         return response({
           job_id: submission.job_id,
@@ -180,9 +183,10 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
     async (input, context) => {
       let jobId: string | undefined = input.job_id;
       try {
-        let job = input.job_id === undefined
-          ? runtime.store.getByIdempotencyKey(input.idempotency_key ?? "")
-          : runtime.store.get(input.job_id);
+        let job =
+          input.job_id === undefined
+            ? runtime.store.getByIdempotencyKey(input.idempotency_key ?? "")
+            : runtime.store.get(input.job_id);
         if (job === undefined) {
           throw new AppError("job_not_found", "No job matched the selector");
         }
@@ -276,17 +280,17 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
         if (input.uncertain_attempt_policy === "cancel") {
           const identity = new SystemProcessIdentityProvider();
           for (const processRow of runtime.store.runningProcesses(input.job_id)) {
-            const cleanup = await identity.terminate({
-              pid: processRow.pid,
-              startedAtMs: processRow.startedAtMs,
-              ...(processRow.processGroupId === undefined
-                ? {}
-                : { processGroupId: processRow.processGroupId }),
-            }, "SIGTERM");
-            runtime.store.markProcessExited(
-              processRow.processId,
-              cleanup === "uncertain",
+            const cleanup = await identity.terminate(
+              {
+                pid: processRow.pid,
+                startedAtMs: processRow.startedAtMs,
+                ...(processRow.processGroupId === undefined
+                  ? {}
+                  : { processGroupId: processRow.processGroupId }),
+              },
+              "SIGTERM",
             );
+            runtime.store.markProcessExited(processRow.processId, cleanup === "uncertain");
           }
         }
         const job = runtime.store.resumeRecovery(input.job_id, input.uncertain_attempt_policy);
@@ -309,7 +313,10 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
     },
     (input) => {
       const models = runtime.config.model_registry.models
-        .filter((model) => model.enabled && (input.adapter === undefined || model.adapter === input.adapter))
+        .filter(
+          (model) =>
+            model.enabled && (input.adapter === undefined || model.adapter === input.adapter),
+        )
         .map((model) => ({
           id: model.id,
           adapter: model.adapter,
@@ -326,8 +333,8 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
     "set_session_models",
     {
       description:
-        "Set default models by adapter for this server process. The overrides are process-scoped, "
-        + "so every client connected to the same HTTP endpoint shares them.",
+        "Set default models by adapter for this server process. The overrides are process-scoped, " +
+        "so every client connected to the same HTTP endpoint shares them.",
       inputSchema: toolContracts.set_session_models.input,
       outputSchema: toolContracts.set_session_models.output,
     },
@@ -392,10 +399,16 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
               ? { ...decision, canonical_result: undefined }
               : decision,
         );
-        return response(parseJsonValue(JSON.parse(JSON.stringify({
-          decisions,
-          ...(page.next_cursor === undefined ? {} : { next_cursor: page.next_cursor }),
-        }))) as JsonObject);
+        return response(
+          parseJsonValue(
+            JSON.parse(
+              JSON.stringify({
+                decisions,
+                ...(page.next_cursor === undefined ? {} : { next_cursor: page.next_cursor }),
+              }),
+            ),
+          ) as JsonObject,
+        );
       } catch (error) {
         return failure(error);
       }
@@ -458,9 +471,7 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
     },
     async (input) => {
       try {
-        return response(parseJsonValue(
-          await runtime.reviewer.review(input),
-        ) as JsonObject);
+        return response(parseJsonValue(await runtime.reviewer.review(input)) as JsonObject);
       } catch (error) {
         return failure(error);
       }
@@ -484,4 +495,3 @@ export const durableToolNames: readonly string[] = [
   "record_decision_outcome",
   "review_decision_change",
 ];
-

@@ -57,19 +57,14 @@ export class SystemProcessIdentityProvider implements ProcessIdentityProvider {
 
   async terminate(identity: ProcessIdentity, signal: NodeJS.Signals): Promise<CleanupStatus> {
     const current = await this.identify(identity.pid, identity.processGroupId);
-    if (
-      current === undefined ||
-      Math.abs(current.startedAtMs - identity.startedAtMs) > 1_500
-    ) {
+    if (current === undefined || Math.abs(current.startedAtMs - identity.startedAtMs) > 1_500) {
       return "uncertain";
     }
     try {
       if (process.platform === "win32") {
-        await execFileAsync(
-          "taskkill.exe",
-          ["/PID", String(identity.pid), "/T", "/F"],
-          { windowsHide: true },
-        );
+        await execFileAsync("taskkill.exe", ["/PID", String(identity.pid), "/T", "/F"], {
+          windowsHide: true,
+        });
       } else {
         process.kill(-(identity.processGroupId ?? identity.pid), signal);
       }
@@ -102,4 +97,3 @@ export function currentProcessIdentity(): ProcessIdentity {
     ...(process.platform === "win32" ? {} : { processGroupId: process.pid }),
   };
 }
-

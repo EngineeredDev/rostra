@@ -60,13 +60,11 @@ async function invokeUntilResult(
 function describeRejection(error: AppError): string {
   const issues = error.details;
   if (!Array.isArray(issues)) return error.message;
-  const described = issues
-    .slice(0, MAXIMUM_REPORTED_ISSUES)
-    .map((issue) => {
-      const path = (issue as { path?: readonly (string | number)[] }).path ?? [];
-      const message = (issue as { message?: string }).message ?? "invalid value";
-      return path.length === 0 ? `- ${message}` : `- ${path.join(".")}: ${message}`;
-    });
+  const described = issues.slice(0, MAXIMUM_REPORTED_ISSUES).map((issue) => {
+    const path = (issue as { path?: readonly (string | number)[] }).path ?? [];
+    const message = (issue as { message?: string }).message ?? "invalid value";
+    return path.length === 0 ? `- ${message}` : `- ${path.join(".")}: ${message}`;
+  });
   if (issues.length > MAXIMUM_REPORTED_ISSUES) {
     described.push(`- (${issues.length - MAXIMUM_REPORTED_ISSUES} further violations omitted)`);
   }

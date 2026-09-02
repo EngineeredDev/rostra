@@ -64,14 +64,16 @@ interface OutcomeInput {
   superseding_decision_id?: string;
 }
 
-function cursorValue(cursor: string | undefined): { created_at_ms: number; id: string } | undefined {
+function cursorValue(
+  cursor: string | undefined,
+): { created_at_ms: number; id: string } | undefined {
   if (cursor === undefined) {
     return undefined;
   }
   try {
-    return z.strictObject({ created_at_ms: z.number().int(), id: z.string() }).parse(
-      JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")),
-    );
+    return z
+      .strictObject({ created_at_ms: z.number().int(), id: z.string() })
+      .parse(JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")));
   } catch {
     throw new AppError("invalid_cursor", "Decision cursor is invalid");
   }
@@ -85,16 +87,20 @@ export class DecisionRepository {
   }
 
   #ensureWorkspace(workspace: WorkspaceIdentity, nowMs = Date.now()): void {
-    this.#db.prepare(`
+    this.#db
+      .prepare(`
       INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES (?, ?, ?)
       ON CONFLICT(id) DO NOTHING
-    `).run(workspace.id, workspace.canonicalRoot, nowMs);
+    `)
+      .run(workspace.id, workspace.canonicalRoot, nowMs);
   }
 
   #row(decisionId: string, workspaceId: string): DecisionRow {
-    const row = this.#db.prepare<[string, string], DecisionRow>(`
+    const row = this.#db
+      .prepare<[string, string], DecisionRow>(`
       SELECT * FROM decisions WHERE id = ? AND workspace_id = ?
-    `).get(decisionId, workspaceId);
+    `)
+      .get(decisionId, workspaceId);
     if (row === undefined) {
       throw new AppError("decision_not_found", `Decision not found: ${decisionId}`);
     }
@@ -106,22 +112,26 @@ export class DecisionRepository {
     if (row.review_due_at_ms <= nowMs) {
       warnings.push("review_due");
     }
-    const superseded = this.#db.prepare<[string, string], { present: number }>(`
+    const superseded = this.#db
+      .prepare<[string, string], { present: number }>(`
       SELECT 1 AS present FROM decision_relations
       WHERE workspace_id = ? AND target_decision_id = ? AND relation_type = 'supersedes'
       LIMIT 1
-    `).get(row.workspace_id, row.id);
+    `)
+      .get(row.workspace_id, row.id);
     if (superseded !== undefined) {
       warnings.push("superseded");
     }
-    const evidence = this.#db.prepare<[string, string], CriticalEvidenceRow>(`
+    const evidence = this.#db
+      .prepare<[string, string], CriticalEvidenceRow>(`
       SELECT e.id, e.source_type, e.canonical_uri, e.content_hash, e.expires_at_ms
       FROM claim_evidence ce
       JOIN claims c ON c.id = ce.claim_id AND c.workspace_id = ce.workspace_id
       JOIN evidence e ON e.id = ce.evidence_id AND e.workspace_id = ce.workspace_id
       WHERE ce.workspace_id = ? AND c.decision_id = ? AND ce.is_critical = 1
       ORDER BY e.id
-    `).all(row.workspace_id, row.id);
+    `)
+      .all(row.workspace_id, row.id);
     for (const item of evidence) {
       if (item.expires_at_ms !== null && item.expires_at_ms <= nowMs) {
         warnings.push(`expired_evidence:${item.id}`);
@@ -148,7 +158,8 @@ export class DecisionRepository {
   async #view(row: DecisionRow, findContradictions: boolean): Promise<DecisionView> {
     const warnings = await this.#staleness(row);
     const contradictions = findContradictions
-      ? this.#db.prepare<[string, string, string, string], { id: string }>(`
+      ? this.#db
+          .prepare<[string, string, string, string], { id: string }>(`
           SELECT CASE
             WHEN source_decision_id = ? THEN target_decision_id
             ELSE source_decision_id
@@ -157,7 +168,9 @@ export class DecisionRepository {
           WHERE workspace_id = ? AND relation_type = 'contradicts'
             AND (source_decision_id = ? OR target_decision_id = ?)
           ORDER BY id
-        `).all(row.id, row.workspace_id, row.id, row.id).map((item) => item.id)
+        `)
+          .all(row.id, row.workspace_id, row.id, row.id)
+          .map((item) => item.id)
       : [];
     return {
       id: row.id,
@@ -180,7 +193,10 @@ export class DecisionRepository {
     const workspace = await deriveWorkspaceIdentity(input.working_directory);
     this.#ensureWorkspace(workspace);
     if (input.decision_id !== undefined) {
-      const view = await this.#view(this.#row(input.decision_id, workspace.id), input.find_contradictions);
+      const view = await this.#view(
+        this.#row(input.decision_id, workspace.id),
+        input.find_contradictions,
+      );
       return { decisions: !input.include_stale && view.stale ? [] : [view] };
     }
 
@@ -211,12 +227,14 @@ export class DecisionRepository {
       }
     }
     parameters.push(input.limit + 1);
-    const rows = this.#db.prepare<unknown[], DecisionRow>(`
+    const rows = this.#db
+      .prepare<unknown[], DecisionRow>(`
       SELECT d.* FROM decisions d
       WHERE ${conditions.join(" AND ")}
       ORDER BY d.created_at_ms, d.id
       LIMIT ?
-    `).all(...parameters);
+    `)
+      .all(...parameters);
     const views: DecisionView[] = [];
     for (const row of rows) {
       const view = await this.#view(row, input.find_contradictions);
@@ -231,20 +249,18 @@ export class DecisionRepository {
       decisions,
       ...(hasMore && last !== undefined
         ? {
-            next_cursor: Buffer.from(JSON.stringify({
-              created_at_ms: last.created_at_ms,
-              id: last.id,
-            })).toString("base64url"),
+            next_cursor: Buffer.from(
+              JSON.stringify({
+                created_at_ms: last.created_at_ms,
+                id: last.id,
+              }),
+            ).toString("base64url"),
           }
         : {}),
     };
   }
 
-  async listStale(
-    workingDirectory: string,
-    limit: number,
-    cursor?: string,
-  ): Promise<DecisionPage> {
+  async listStale(workingDirectory: string, limit: number, cursor?: string): Promise<DecisionPage> {
     const page = await this.query({
       working_directory: workingDirectory,
       query_text: "",
@@ -255,7 +271,10 @@ export class DecisionRepository {
       find_contradictions: false,
     });
     const stale = page.decisions.filter((decision) => decision.stale).slice(0, limit);
-    return { decisions: stale, ...(page.next_cursor === undefined ? {} : { next_cursor: page.next_cursor }) };
+    return {
+      decisions: stale,
+      ...(page.next_cursor === undefined ? {} : { next_cursor: page.next_cursor }),
+    };
   }
 
   async recordOutcome(input: OutcomeInput): Promise<{ outcome_id: string; decision_id: string }> {
@@ -269,42 +288,51 @@ export class DecisionRepository {
     }
     const outcomeId = randomUUID();
     const nowMs = Date.now();
-    this.#db.transaction(() => {
-      this.#db.prepare(`
+    this.#db
+      .transaction(() => {
+        this.#db
+          .prepare(`
         INSERT INTO outcomes(
           id, workspace_id, decision_id, prediction_id, status, observed_at,
           measurements_json, notes, superseding_decision_id, created_at_ms
         ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
-      `).run(
-        outcomeId,
-        workspace.id,
-        decision.id,
-        input.status,
-        input.observed_at,
-        canonicalJson(parseJsonValue(input.measurements)),
-        input.notes ?? null,
-        input.superseding_decision_id ?? null,
-        nowMs,
-      );
-      if (input.status === "confirmed" || input.status === "disconfirmed") {
-        this.#db.prepare(`
+      `)
+          .run(
+            outcomeId,
+            workspace.id,
+            decision.id,
+            input.status,
+            input.observed_at,
+            canonicalJson(parseJsonValue(input.measurements)),
+            input.notes ?? null,
+            input.superseding_decision_id ?? null,
+            nowMs,
+          );
+        if (input.status === "confirmed" || input.status === "disconfirmed") {
+          this.#db
+            .prepare(`
           UPDATE predictions SET resolved_label = ?, resolved_at_ms = ?
           WHERE workspace_id = ? AND decision_id = ? AND resolved_label IS NULL
-        `).run(input.status === "confirmed" ? 1 : 0, nowMs, workspace.id, decision.id);
-      }
-      if (input.status === "superseded" && input.superseding_decision_id !== undefined) {
-        this.#db.prepare(`
+        `)
+            .run(input.status === "confirmed" ? 1 : 0, nowMs, workspace.id, decision.id);
+        }
+        if (input.status === "superseded" && input.superseding_decision_id !== undefined) {
+          this.#db
+            .prepare(`
           INSERT OR IGNORE INTO decision_relations(
             id, workspace_id, source_decision_id, target_decision_id, relation_type, created_at_ms
           ) VALUES (?, ?, ?, ?, 'supersedes', ?)
-        `).run(randomUUID(), workspace.id, input.superseding_decision_id, decision.id, nowMs);
-      }
-      this.#db.prepare(`
+        `)
+            .run(randomUUID(), workspace.id, input.superseding_decision_id, decision.id, nowMs);
+        }
+        this.#db
+          .prepare(`
         UPDATE decisions SET outcome_status = ?, updated_at_ms = ?
         WHERE id = ? AND workspace_id = ?
-      `).run(input.status, nowMs, decision.id, workspace.id);
-    }).immediate();
+      `)
+          .run(input.status, nowMs, decision.id, workspace.id);
+      })
+      .immediate();
     return { outcome_id: outcomeId, decision_id: decision.id };
   }
 }
-

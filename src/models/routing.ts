@@ -71,8 +71,8 @@ export function selectAdaptiveCommittee(input: RoutingInput): CommitteeSelection
     const knownCost =
       model.input_usd_per_million !== undefined && model.output_usd_per_million !== undefined;
     const estimatedCost = knownCost
-      ? (model.input_usd_per_million ?? 0) * 2_000 / 1_000_000 +
-        (model.output_usd_per_million ?? 0) * 1_000 / 1_000_000
+      ? ((model.input_usd_per_million ?? 0) * 2_000) / 1_000_000 +
+        ((model.output_usd_per_million ?? 0) * 1_000) / 1_000_000
       : null;
     if (input.maxCostUsd !== undefined && estimatedCost === null && !input.allowUnknownCost) {
       excluded.push({ adapter: model.adapter, model: model.id, reason: "unknown_cost" });
@@ -90,9 +90,8 @@ export function selectAdaptiveCommittee(input: RoutingInput): CommitteeSelection
       metric === undefined || metric.resolvedPredictions < 5
         ? 0.5
         : Math.max(0, Math.min(1, 1 - metric.brierSum / metric.resolvedPredictions));
-    const successRate = metric === undefined
-      ? 0.5
-      : (metric.validAttempts + 1) / (metric.attempts + 2);
+    const successRate =
+      metric === undefined ? 0.5 : (metric.validAttempts + 1) / (metric.attempts + 2);
     candidates.push({
       config: model,
       ...(metric === undefined ? {} : { metric }),
@@ -113,9 +112,10 @@ export function selectAdaptiveCommittee(input: RoutingInput): CommitteeSelection
   const minimumLatency = latencies.length === 0 ? 0 : Math.min(...latencies);
   const maximumLatency = latencies.length === 0 ? 0 : Math.max(...latencies);
   for (const candidate of candidates) {
-    const normalizedCost = candidate.estimatedCost === null
-      ? 0.5
-      : normalized(candidate.estimatedCost, minimumCost, maximumCost);
+    const normalizedCost =
+      candidate.estimatedCost === null
+        ? 0.5
+        : normalized(candidate.estimatedCost, minimumCost, maximumCost);
     const normalizedLatency = normalized(candidate.latency, minimumLatency, maximumLatency);
     candidate.efficiency = 0.5 * (1 - normalizedCost) + 0.5 * (1 - normalizedLatency);
   }
@@ -132,7 +132,8 @@ export function selectAdaptiveCommittee(input: RoutingInput): CommitteeSelection
       .filter((candidate) => {
         const key = `${candidate.config.adapter}\0${candidate.config.id}`;
         if (selectedKeys.has(key)) return false;
-        if (requireNewFamily && selectedFamilies.has(candidate.config.provider_family)) return false;
+        if (requireNewFamily && selectedFamilies.has(candidate.config.provider_family))
+          return false;
         if (
           input.maxCostUsd !== undefined &&
           candidate.estimatedCost !== null &&
@@ -145,19 +146,23 @@ export function selectAdaptiveCommittee(input: RoutingInput): CommitteeSelection
       .map((candidate) => {
         const novelty = selectedFamilies.has(candidate.config.provider_family) ? 0 : 1;
         const score =
-          0.40 * candidate.calibration +
+          0.4 * candidate.calibration +
           0.25 * candidate.successRate +
-          0.20 * novelty +
+          0.2 * novelty +
           0.15 * candidate.efficiency;
         return { candidate, novelty, score };
       })
       .sort((left, right) => {
-        const leftPreferred = input.preferredModels?.[left.candidate.config.adapter] === left.candidate.config.id;
-        const rightPreferred = input.preferredModels?.[right.candidate.config.adapter] === right.candidate.config.id;
-        return Number(rightPreferred) - Number(leftPreferred) ||
+        const leftPreferred =
+          input.preferredModels?.[left.candidate.config.adapter] === left.candidate.config.id;
+        const rightPreferred =
+          input.preferredModels?.[right.candidate.config.adapter] === right.candidate.config.id;
+        return (
+          Number(rightPreferred) - Number(leftPreferred) ||
           right.score - left.score ||
           left.candidate.config.adapter.localeCompare(right.candidate.config.adapter) ||
-          left.candidate.config.id.localeCompare(right.candidate.config.id);
+          left.candidate.config.id.localeCompare(right.candidate.config.id)
+        );
       });
     const choice = ranked[0];
     if (choice === undefined) {
@@ -181,11 +186,12 @@ export function selectAdaptiveCommittee(input: RoutingInput): CommitteeSelection
         provider_family_novelty: choice.novelty,
         cost_latency_efficiency: choice.candidate.efficiency,
       },
-      selection_reason: input.preferredModels?.[model.adapter] === model.id
-        ? "session_default"
-        : choice.candidate.metric === undefined
-          ? "exploration_candidate"
-          : "highest_calibrated_score",
+      selection_reason:
+        input.preferredModels?.[model.adapter] === model.id
+          ? "session_default"
+          : choice.candidate.metric === undefined
+            ? "exploration_candidate"
+            : "highest_calibrated_score",
     });
   }
   return {

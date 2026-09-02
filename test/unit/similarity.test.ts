@@ -17,8 +17,12 @@ describe("explicit similarity providers", () => {
     roots.push(root);
     await mkdir(join(root, "onnx"), { recursive: true });
     for (const path of [
-      "config.json", "special_tokens_map.json", "tokenizer.json",
-      "tokenizer_config.json", "vocab.txt", "onnx/model.onnx",
+      "config.json",
+      "special_tokens_map.json",
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "vocab.txt",
+      "onnx/model.onnx",
     ]) {
       await writeFile(join(root, path), "corrupt");
     }
@@ -34,20 +38,33 @@ describe("explicit similarity providers", () => {
         return Promise.resolve(() => Promise.resolve([[1, 0]]));
       },
     });
-    await expect(provider.initialize()).rejects.toMatchObject({ code: "similarity_model_unavailable" });
+    await expect(provider.initialize()).rejects.toMatchObject({
+      code: "similarity_model_unavailable",
+    });
     expect(constructed).toBe(false);
   });
 
   it("maps remote embeddings and keys cache identity by calibrated thresholds", async () => {
     const requests: string[] = [];
     const fetchMock: typeof fetch = (resource) => {
-      requests.push(resource instanceof URL ? resource.href : typeof resource === "string" ? resource : resource.url);
-      return Promise.resolve(new Response(JSON.stringify({
-        data: [
-          { index: 0, embedding: [1, 0] },
-          { index: 1, embedding: [0, 1] },
-        ],
-      }), { status: 200, headers: { "content-type": "application/json" } }));
+      requests.push(
+        resource instanceof URL
+          ? resource.href
+          : typeof resource === "string"
+            ? resource
+            : resource.url,
+      );
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [
+              { index: 0, embedding: [1, 0] },
+              { index: 1, embedding: [0, 1] },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
     };
     const provider = new OpenAiCompatibleEmbeddingProvider({
       baseUrl: "https://embedding.test",
@@ -60,18 +77,23 @@ describe("explicit similarity providers", () => {
       fetch: fetchMock,
     });
     await provider.initialize();
-    await expect(provider.embed(["a", "b"])).resolves.toEqual([[1, 0], [0, 1]]);
+    await expect(provider.embed(["a", "b"])).resolves.toEqual([
+      [1, 0],
+      [0, 1],
+    ]);
     expect(provider.similarity([1, 0], [0, 1])).toBe(0);
     expect(requests).toEqual(["https://embedding.test/v1/embeddings"]);
-    expect(provider.cacheKey("same")).not.toBe(new OpenAiCompatibleEmbeddingProvider({
-      baseUrl: "https://embedding.test",
-      model: "embed-a",
-      apiKeyEnvironment: "EMBED_KEY",
-      agreementThreshold: 0.81,
-      retrievalThreshold: 0.7,
-      thresholdsRevision: "remote-v1",
-      environment: { EMBED_KEY: "secret" },
-      fetch: fetchMock,
-    }).cacheKey("same"));
+    expect(provider.cacheKey("same")).not.toBe(
+      new OpenAiCompatibleEmbeddingProvider({
+        baseUrl: "https://embedding.test",
+        model: "embed-a",
+        apiKeyEnvironment: "EMBED_KEY",
+        agreementThreshold: 0.81,
+        retrievalThreshold: 0.7,
+        thresholdsRevision: "remote-v1",
+        environment: { EMBED_KEY: "secret" },
+        fetch: fetchMock,
+      }).cacheKey("same"),
+    );
   });
 });

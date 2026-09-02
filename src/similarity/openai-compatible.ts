@@ -16,10 +16,12 @@ interface OpenAiCompatibleOptions {
 }
 
 const responseSchema = z.strictObject({
-  data: z.array(z.strictObject({
-    index: z.number().int().nonnegative(),
-    embedding: z.array(z.number()).min(1),
-  })),
+  data: z.array(
+    z.strictObject({
+      index: z.number().int().nonnegative(),
+      embedding: z.array(z.number()).min(1),
+    }),
+  ),
 });
 
 export class OpenAiCompatibleEmbeddingProvider extends BaseSimilarityProvider {
@@ -56,10 +58,7 @@ export class OpenAiCompatibleEmbeddingProvider extends BaseSimilarityProvider {
   initialize(): Promise<void> {
     const secret = this.#environment[this.#apiKeyEnvironment];
     if (secret === undefined || secret === "") {
-      throw new AppError(
-        "similarity_backend_unavailable",
-        `Missing ${this.#apiKeyEnvironment}`,
-      );
+      throw new AppError("similarity_backend_unavailable", `Missing ${this.#apiKeyEnvironment}`);
     }
     this.#apiKey = secret;
     return Promise.resolve();

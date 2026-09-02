@@ -52,9 +52,7 @@ export class ModelRegistry {
     const configuredDefault = this.#models.find(
       (model) => model.adapter === adapter && model.enabled && model.default,
     );
-    const firstEnabled = this.#models.find(
-      (model) => model.adapter === adapter && model.enabled,
-    );
+    const firstEnabled = this.#models.find((model) => model.adapter === adapter && model.enabled);
     const model = configuredDefault ?? firstEnabled;
     if (model === undefined) {
       throw new AppError("model_not_allowed", `No enabled model is configured for ${adapter}`);

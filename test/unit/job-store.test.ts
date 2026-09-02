@@ -39,10 +39,15 @@ describe("durable job store", () => {
     const same = store.submit({ ...request }, { idempotencyKey: "stable-key", nowMs: 101 });
     expect(same).toMatchObject({ job_id: first.job_id, deduplicated: true });
 
-    expect(() => store.submit({ ...request, question: "Different" }, {
-      idempotencyKey: "stable-key",
-      nowMs: 102,
-    })).toThrowError(expect.objectContaining({ code: "idempotency_conflict" }));
+    expect(() =>
+      store.submit(
+        { ...request, question: "Different" },
+        {
+          idempotencyKey: "stable-key",
+          nowMs: 102,
+        },
+      ),
+    ).toThrowError(expect.objectContaining({ code: "idempotency_conflict" }));
 
     const fingerprintDedupe = store.submit(request, { nowMs: 103 });
     expect(fingerprintDedupe.job_id).toBe(first.job_id);
@@ -55,7 +60,11 @@ describe("durable job store", () => {
     const store = await createStore();
     const submission = store.submit(request, { nowMs: 1_000 });
     const claimed = store.claimNext("build-a", "config-a", 1_001);
-    expect(claimed).toMatchObject({ job_id: submission.job_id, status: "dispatching", row_version: 1 });
+    expect(claimed).toMatchObject({
+      job_id: submission.job_id,
+      status: "dispatching",
+      row_version: 1,
+    });
     if (claimed === undefined) throw new Error("Expected claimed job");
 
     const running = store.handshakeWorker(
@@ -65,9 +74,9 @@ describe("durable job store", () => {
       1_002,
     );
     expect(running).toMatchObject({ status: "running", row_version: 2 });
-    expect(() => store.heartbeat(running.job_id, "wrong-token", running.row_version, 1_003)).toThrowError(
-      expect.objectContaining({ code: "lease_lost" }),
-    );
+    expect(() =>
+      store.heartbeat(running.job_id, "wrong-token", running.row_version, 1_003),
+    ).toThrowError(expect.objectContaining({ code: "lease_lost" }));
     const heartbeat = store.heartbeat(
       running.job_id,
       running.lease_token,
@@ -89,7 +98,9 @@ describe("durable job store", () => {
       nowMs: 1_006,
     });
     expect(cancelled.status).toBe("cancelled");
-    expect(store.events(running.job_id, 0, 100).map((event) => event.seq)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(store.events(running.job_id, 0, 100).map((event) => event.seq)).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ]);
     store.close();
   });
 
@@ -100,7 +111,9 @@ describe("durable job store", () => {
     store.submit({ ...request, question: "three" }, { forceNew: true, nowMs: 102 });
     const page = store.list({ limit: 2 });
     expect(page.jobs.map((job) => job.question)).toEqual(["one", "two"]);
-    expect(store.list({ limit: 2, cursor: page.next_cursor }).jobs.map((job) => job.question)).toEqual(["three"]);
+    expect(
+      store.list({ limit: 2, cursor: page.next_cursor }).jobs.map((job) => job.question),
+    ).toEqual(["three"]);
 
     const attempt = store.createAttempt({
       jobId: second.job_id,
@@ -112,17 +125,24 @@ describe("durable job store", () => {
       executionIsolation: "builtin_confined",
       nowMs: 103,
     });
-    store.finishAttempt(attempt.attempt_id, "succeeded", { responseId: "response-a", responseDigest: "def" }, 104);
-    expect(store.createAttempt({
-      jobId: second.job_id,
-      stageId: "analysis",
-      participantId: "reviewer_a",
-      attemptKind: "stage",
-      ordinal: 0,
-      requestDigest: "abc",
-      executionIsolation: "builtin_confined",
-      nowMs: 105,
-    })).toMatchObject({ attempt_id: attempt.attempt_id, status: "succeeded" });
+    store.finishAttempt(
+      attempt.attempt_id,
+      "succeeded",
+      { responseId: "response-a", responseDigest: "def" },
+      104,
+    );
+    expect(
+      store.createAttempt({
+        jobId: second.job_id,
+        stageId: "analysis",
+        participantId: "reviewer_a",
+        attemptKind: "stage",
+        ordinal: 0,
+        requestDigest: "abc",
+        executionIsolation: "builtin_confined",
+        nowMs: 105,
+      }),
+    ).toMatchObject({ attempt_id: attempt.attempt_id, status: "succeeded" });
     const processId = store.registerProcess({
       jobId: second.job_id,
       attemptId: attempt.attempt_id,
@@ -132,18 +152,20 @@ describe("durable job store", () => {
       nowMs: 106,
     });
     store.markProcessExited(processId, false, 107);
-    expect(store.recordQuality({
-      adapter: "codex",
-      model: "sol",
-      domain: "general",
-      valid_attempt: true,
-      valid_ballot: true,
-      latencyMs: 25,
-      inputTokens: 10,
-      outputTokens: 5,
-      costUsd: 0.01,
-      nowMs: 108,
-    })).toMatchObject({ attempts: 1, valid_attempts: 1, latency_samples_ms: [25] });
+    expect(
+      store.recordQuality({
+        adapter: "codex",
+        model: "sol",
+        domain: "general",
+        valid_attempt: true,
+        valid_ballot: true,
+        latencyMs: 25,
+        inputTokens: 10,
+        outputTokens: 5,
+        costUsd: 0.01,
+        nowMs: 108,
+      }),
+    ).toMatchObject({ attempts: 1, valid_attempts: 1, latency_samples_ms: [25] });
     store.transition({
       jobId: second.job_id,
       expectedStatus: "queued",

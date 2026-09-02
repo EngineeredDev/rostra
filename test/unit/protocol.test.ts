@@ -35,14 +35,16 @@ describe("protocol state reducer", () => {
       rawText: "analysis a",
       submission: { recommendation: "a" },
     });
-    expect(() => reduceProtocol(state, {
-      type: "record_response",
-      stageId: "analysis",
-      participantId: "a",
-      responseId: "r2",
-      rawText: "duplicate",
-      submission: {},
-    })).toThrowError(expect.objectContaining({ code: "duplicate_stage_response" }));
+    expect(() =>
+      reduceProtocol(state, {
+        type: "record_response",
+        stageId: "analysis",
+        participantId: "a",
+        responseId: "r2",
+        rawText: "duplicate",
+        submission: {},
+      }),
+    ).toThrowError(expect.objectContaining({ code: "duplicate_stage_response" }));
     state = reduceProtocol(state, {
       type: "record_response",
       stageId: "analysis",
@@ -95,26 +97,33 @@ describe("final ballot projection", () => {
   it("reports tie and no-ballot boundaries without consensus", () => {
     const tie = projectFinalBallots({
       participantIds: participants,
-      stages: [{
-        stageId: "final",
-        ordinal: 1,
-        completed: true,
-        ballots: [
-          { participantId: "a", optionLabel: "option-a", rationale: "a", confidence: 0.8 },
-          { participantId: "b", optionLabel: "option-b", rationale: "b", confidence: 0.8 },
-          { participantId: "c", failureReason: "missing" },
-        ],
-      }],
+      stages: [
+        {
+          stageId: "final",
+          ordinal: 1,
+          completed: true,
+          ballots: [
+            { participantId: "a", optionLabel: "option-a", rationale: "a", confidence: 0.8 },
+            { participantId: "b", optionLabel: "option-b", rationale: "b", confidence: 0.8 },
+            { participantId: "c", failureReason: "missing" },
+          ],
+        },
+      ],
     });
     expect(tie).toMatchObject({ outcome: "tie", consensus_reached: false, abstentions: 1 });
     const none = projectFinalBallots({
       participantIds: participants,
-      stages: [{
-        stageId: "final",
-        ordinal: 1,
-        completed: true,
-        ballots: participants.map((participantId) => ({ participantId, failureReason: "failed" })),
-      }],
+      stages: [
+        {
+          stageId: "final",
+          ordinal: 1,
+          completed: true,
+          ballots: participants.map((participantId) => ({
+            participantId,
+            failureReason: "failed",
+          })),
+        },
+      ],
     });
     expect(none).toMatchObject({ outcome: "no_ballots", consensus_reached: false });
   });
@@ -122,16 +131,21 @@ describe("final ballot projection", () => {
   it("requires configured option IDs when decision options are supplied", () => {
     const projection = projectFinalBallots({
       participantIds: ["a", "b"],
-      decisionOptions: [{ id: "safe", label: "Safe" }, { id: "fast", label: "Fast" }],
-      stages: [{
-        stageId: "final",
-        ordinal: 1,
-        completed: true,
-        ballots: [
-          { participantId: "a", optionLabel: "Safe", rationale: "label only", confidence: 0.9 },
-          { participantId: "b", optionId: "safe", rationale: "ID", confidence: 0.9 },
-        ],
-      }],
+      decisionOptions: [
+        { id: "safe", label: "Safe" },
+        { id: "fast", label: "Fast" },
+      ],
+      stages: [
+        {
+          stageId: "final",
+          ordinal: 1,
+          completed: true,
+          ballots: [
+            { participantId: "a", optionLabel: "Safe", rationale: "label only", confidence: 0.9 },
+            { participantId: "b", optionId: "safe", rationale: "ID", confidence: 0.9 },
+          ],
+        },
+      ],
     });
     expect(projection).toMatchObject({
       final_tally: { safe: 1 },
@@ -152,7 +166,7 @@ describe("convergence and result status", () => {
         { participantId: "d", position: "choose b", vote: "option-b" },
       ]),
       requiredStableChecks: 2,
-      similarity: (left, right) => left === right ? 1 : 0,
+      similarity: (left, right) => (left === right ? 1 : 0),
       agreementThreshold: 0.9,
     });
     expect(convergence).toMatchObject({
@@ -167,22 +181,26 @@ describe("convergence and result status", () => {
   });
 
   it("classifies substantive non-consensus as partial and empty work as failed", () => {
-    expect(classifyExecutionResult({
-      protocolCompleted: true,
-      substantiveResponses: 2,
-      ballotOutcome: "tie",
-      failedParticipants: [],
-      summaryFallback: false,
-      persistenceSucceeded: true,
-    })).toEqual({ resultStatus: "partial", jobStatus: "succeeded" });
-    expect(classifyExecutionResult({
-      protocolCompleted: false,
-      substantiveResponses: 0,
-      ballotOutcome: "no_ballots",
-      failedParticipants: participants,
-      summaryFallback: false,
-      persistenceSucceeded: false,
-    })).toEqual({ resultStatus: "failed", jobStatus: "failed" });
+    expect(
+      classifyExecutionResult({
+        protocolCompleted: true,
+        substantiveResponses: 2,
+        ballotOutcome: "tie",
+        failedParticipants: [],
+        summaryFallback: false,
+        persistenceSucceeded: true,
+      }),
+    ).toEqual({ resultStatus: "partial", jobStatus: "succeeded" });
+    expect(
+      classifyExecutionResult({
+        protocolCompleted: false,
+        substantiveResponses: 0,
+        ballotOutcome: "no_ballots",
+        failedParticipants: participants,
+        summaryFallback: false,
+        persistenceSucceeded: false,
+      }),
+    ).toEqual({ resultStatus: "failed", jobStatus: "failed" });
   });
 });
 
@@ -194,9 +212,11 @@ describe("structured stage invocation", () => {
       prompt: "vote",
       invoke: (prompt, attemptKind) => {
         attempts.push(`${attemptKind}:${prompt}`);
-        return Promise.resolve(attempts.length === 1
-          ? "invalid"
-          : 'fixed\nROSTRA_RESULT: {"option_id":"a","confidence":1,"rationale":"ok","continue_debate":false}');
+        return Promise.resolve(
+          attempts.length === 1
+            ? "invalid"
+            : 'fixed\nROSTRA_RESULT: {"option_id":"a","confidence":1,"rationale":"ok","continue_debate":false}',
+        );
       },
     });
     expect(result.submission).toMatchObject({ option_id: "a" });
@@ -214,30 +234,36 @@ describe("structured stage invocation", () => {
       predictions: ["a packaging-only gate proves nothing"],
     });
     const validAnalysis = JSON.stringify({
-      claims: [{
-        claim_id: "22222222-2222-4222-8222-222222222222",
-        type: "fact",
-        text: "hand-written JavaScript is fine",
-        confidence: 0.9,
-      }],
+      claims: [
+        {
+          claim_id: "22222222-2222-4222-8222-222222222222",
+          type: "fact",
+          text: "hand-written JavaScript is fine",
+          confidence: 0.9,
+        },
+      ],
       assumptions: ["the repository observations are accurate"],
       recommendation: "keep plain JavaScript",
       confidence: 0.9,
-      predictions: [{
-        statement: "a packaging-only gate proves nothing",
-        probability: 0.8,
-        target_date: "2030-01-01T00:00:00Z",
-        resolution_criteria: "CI reports a runtime failure",
-      }],
+      predictions: [
+        {
+          statement: "a packaging-only gate proves nothing",
+          probability: 0.8,
+          target_date: "2030-01-01T00:00:00Z",
+          resolution_criteria: "CI reports a runtime failure",
+        },
+      ],
     });
     const result = await invokeStructuredStage({
       kind: "independent_analysis",
       prompt: "analyse",
       invoke: (prompt) => {
         prompts.push(prompt);
-        return Promise.resolve(prompts.length === 1
-          ? `reasoning\nROSTRA_RESULT: ${stringClaims}`
-          : `reasoning\nROSTRA_RESULT: ${validAnalysis}`);
+        return Promise.resolve(
+          prompts.length === 1
+            ? `reasoning\nROSTRA_RESULT: ${stringClaims}`
+            : `reasoning\nROSTRA_RESULT: ${validAnalysis}`,
+        );
       },
     });
     expect(result.submission).toMatchObject({ confidence: 0.9 });

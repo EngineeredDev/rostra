@@ -2,31 +2,21 @@
   "name": "@engineereddev/rostra",
   "version": "0.1.0-beta.2",
   "description": "Durable evidence-backed deliberation and Decision CI MCP server",
+  "keywords": [
+    "decision-making",
+    "deliberation",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "homepage": "https://github.com/EngineeredDev/rostra#readme",
+  "bugs": {
+    "url": "https://github.com/EngineeredDev/rostra/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/EngineeredDev/rostra.git"
   },
-  "homepage": "https://github.com/EngineeredDev/rostra#readme",
-  "bugs": {
-    "url": "https://github.com/EngineeredDev/rostra/issues"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "deliberation",
-    "decision-making"
-  ],
-  "mcpName": "io.github.engineereddev/rostra",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "type": "module",
-  "engines": {
-    "node": ">=24"
-  },
-  "packageManager": "pnpm@10.11.0",
   "bin": {
     "rostra": "dist/cli/main.js",
     "rostra-supervisor": "dist/jobs/supervisor-main.js",
@@ -39,11 +29,18 @@
     "LICENSE",
     "README.md"
   ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "prepack": "pnpm build",
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc -p tsconfig.typecheck.json",
-    "lint": "eslint .",
+    "lint": "oxlint --tsconfig tsconfig.typecheck.json .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
@@ -62,17 +59,21 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "10.0.1",
     "@modelcontextprotocol/client": "2.0.0",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.13.3",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
-    "eslint": "10.9.1",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
+    "oxlint-tsgolint": "7.0.2001",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.68.0",
     "vitest": "4.1.11"
   },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.11.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
@@ -80,5 +81,6 @@
       "protobufjs",
       "sharp"
     ]
-  }
+  },
+  "mcpName": "io.github.engineereddev/rostra"
 }

@@ -3,7 +3,7 @@ WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
-COPY tsconfig.json tsconfig.typecheck.json eslint.config.js vitest.config.ts ./
+COPY tsconfig.json tsconfig.typecheck.json vitest.config.ts ./
 COPY scripts ./scripts
 COPY src ./src
 COPY config.example.yaml LICENSE README.md ./

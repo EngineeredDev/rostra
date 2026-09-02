@@ -42,12 +42,14 @@ describe("model registry", () => {
     const models = new ModelRegistry(config, adapters);
     expect(models.resolve("codex")).toMatchObject({ id: "sol", adapter: "codex" });
     expect(models.capabilities("codex", "sol")).toEqual(["analysis", "code"]);
-    expect(() => models.validateParticipant({
-      participant_id: "reviewer",
-      cli: "codex",
-      model: "sol",
-      reasoning_effort: "xhigh",
-    })).toThrowError(expect.objectContaining({ code: "reasoning_effort_not_supported" }));
+    expect(() =>
+      models.validateParticipant({
+        participant_id: "reviewer",
+        cli: "codex",
+        model: "sol",
+        reasoning_effort: "xhigh",
+      }),
+    ).toThrowError(expect.objectContaining({ code: "reasoning_effort_not_supported" }));
     expect(() => models.resolve("codex", "disabled")).toThrowError(
       expect.objectContaining({ code: "model_disabled" }),
     );

@@ -47,11 +47,13 @@ export const ballotProjectionSchema = z.strictObject({
   abstentions: z.number().int().nonnegative(),
   final_tally: z.record(slugSchema, z.number().int().nonnegative()),
   winner: slugSchema.optional(),
-  minority_reports: z.array(z.strictObject({
-    option_id: slugSchema,
-    votes: z.number().int().positive(),
-    rationale: nonemptyStringSchema,
-  })),
+  minority_reports: z.array(
+    z.strictObject({
+      option_id: slugSchema,
+      votes: z.number().int().positive(),
+      rationale: nonemptyStringSchema,
+    }),
+  ),
   ballot_history: z.array(ballotRecordSchema),
 });
 

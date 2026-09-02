@@ -7,7 +7,10 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { configSchema } from "../../src/config/schema.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { reviewDecisionChangeInputSchema, reviewDecisionChangeOutputSchema } from "../../src/contracts/tools.js";
+import {
+  reviewDecisionChangeInputSchema,
+  reviewDecisionChangeOutputSchema,
+} from "../../src/contracts/tools.js";
 import { DecisionCiReviewer } from "../../src/decision-ci/review.js";
 import { DecisionRepository } from "../../src/decisions/repository.js";
 import { deriveWorkspaceIdentity } from "../../src/decisions/workspace.js";
@@ -43,8 +46,11 @@ describe("local Decision CI", () => {
     const claimId = "22222222-2222-4222-8222-222222222222";
     const evidenceId = "33333333-3333-4333-8333-333333333333";
     const now = Date.now();
-    db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES (?, ?, ?)")
-      .run(workspace.id, workspace.canonicalRoot, now);
+    db.prepare("INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES (?, ?, ?)").run(
+      workspace.id,
+      workspace.canonicalRoot,
+      now,
+    );
     db.prepare(`
       INSERT INTO decisions(
         id, workspace_id, question, protocol, result_status, outcome_status,
@@ -61,14 +67,7 @@ describe("local Decision CI", () => {
         id, workspace_id, decision_id, source_type, canonical_uri, locator, content_hash,
         captured_at_ms, tool_or_adapter, execution_isolation, redaction_status
       ) VALUES (?, ?, ?, 'file', ?, 'L1', ?, ?, 'read_file', 'builtin_confined', 'none')
-    `).run(
-      evidenceId,
-      workspace.id,
-      decisionId,
-      evidencePath,
-      await sha256File(evidencePath),
-      now,
-    );
+    `).run(evidenceId, workspace.id, decisionId, evidencePath, await sha256File(evidencePath), now);
     db.prepare(`
       INSERT INTO claim_evidence(workspace_id, claim_id, evidence_id, polarity, is_critical)
       VALUES (?, ?, ?, 'supports', 1)
@@ -80,12 +79,14 @@ describe("local Decision CI", () => {
     const { stdout: headStdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root });
     const head = headStdout.trim();
     const reviewer = new DecisionCiReviewer(db);
-    const result = await reviewer.review(reviewDecisionChangeInputSchema.parse({
-      working_directory: root,
-      base_ref: base,
-      head_ref: head,
-      fail_on: "warning",
-    }));
+    const result = await reviewer.review(
+      reviewDecisionChangeInputSchema.parse({
+        working_directory: root,
+        base_ref: base,
+        head_ref: head,
+        fail_on: "warning",
+      }),
+    );
     expect(result).toMatchObject({
       workspace_root: workspace.canonicalRoot,
       base_sha: base,
@@ -124,56 +125,81 @@ describe("local Decision CI", () => {
     const mcpClient = new Client({ name: "decision-ci-test", version: "1" });
     const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
     await Promise.all([mcpServer.connect(serverTransport), mcpClient.connect(clientTransport)]);
-    const mcpReview = reviewDecisionChangeOutputSchema.parse((await mcpClient.callTool({
-      name: "review_decision_change",
-      arguments: {
-        working_directory: root,
-        base_ref: base,
-        head_ref: head,
-        fail_on: "warning",
-      },
-    })).structuredContent);
+    const mcpReview = reviewDecisionChangeOutputSchema.parse(
+      (
+        await mcpClient.callTool({
+          name: "review_decision_change",
+          arguments: {
+            working_directory: root,
+            base_ref: base,
+            head_ref: head,
+            fail_on: "warning",
+          },
+        })
+      ).structuredContent,
+    );
     expect(mcpReview).toEqual(result);
     await Promise.all([mcpClient.close(), mcpServer.close()]);
     const configPath = join(root, "config.yaml");
-    await writeFile(configPath, [
-      "version: 2",
-      "adapters: {}",
-      "model_registry: { models: [] }",
-      "defaults: { protocol: quick }",
-      "protocols: {}",
-      "similarity: { provider: local_minilm }",
-      "execution: { allow_host_tools: false }",
-      "jobs: {}",
-      "storage: {}",
-      "decision_graph: {}",
-      "",
-    ].join("\n"));
+    await writeFile(
+      configPath,
+      [
+        "version: 2",
+        "adapters: {}",
+        "model_registry: { models: [] }",
+        "defaults: { protocol: quick }",
+        "protocols: {}",
+        "similarity: { provider: local_minilm }",
+        "execution: { allow_host_tools: false }",
+        "jobs: {}",
+        "storage: {}",
+        "decision_graph: {}",
+        "",
+      ].join("\n"),
+    );
     const environment = {
       ...process.env,
       ROSTRA_CONFIG: configPath,
       ROSTRA_DATA_HOME: root,
     };
-    const cli = spawnSync(process.execPath, [
-      resolve("dist/cli/main.js"),
-      "decision", "review",
-      "--working-directory", root,
-      "--base", base,
-      "--head", head,
-      "--format", "json",
-      "--fail-on", "warning",
-    ], { cwd: process.cwd(), env: environment, encoding: "utf8" });
+    const cli = spawnSync(
+      process.execPath,
+      [
+        resolve("dist/cli/main.js"),
+        "decision",
+        "review",
+        "--working-directory",
+        root,
+        "--base",
+        base,
+        "--head",
+        head,
+        "--format",
+        "json",
+        "--fail-on",
+        "warning",
+      ],
+      { cwd: process.cwd(), env: environment, encoding: "utf8" },
+    );
     expect(cli.status, cli.stderr).toBe(2);
     expect(reviewDecisionChangeOutputSchema.parse(JSON.parse(cli.stdout)).findings).toEqual(
       result.findings,
     );
-    const malformed = spawnSync(process.execPath, [
-      resolve("dist/cli/main.js"),
-      "decision", "review",
-      "--working-directory", root,
-      "--base", "missing-ref",
-      "--head", head,
-    ], { cwd: process.cwd(), env: environment, encoding: "utf8" });
+    const malformed = spawnSync(
+      process.execPath,
+      [
+        resolve("dist/cli/main.js"),
+        "decision",
+        "review",
+        "--working-directory",
+        root,
+        "--base",
+        "missing-ref",
+        "--head",
+        head,
+      ],
+      { cwd: process.cwd(), env: environment, encoding: "utf8" },
+    );
     expect(malformed.status).toBe(1);
     db.close();
   });

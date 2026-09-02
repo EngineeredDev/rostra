@@ -20,7 +20,6 @@ import {
   type JobSnapshot,
 } from "./schema.js";
 
-
 interface JobRow {
   job_id: string;
   idempotency_key: string | null;
@@ -220,8 +219,6 @@ export interface DecisionCommitInput {
   nowMs?: number;
 }
 
-
-
 function rowToJob(row: JobRow): JobSnapshot {
   const result = row.result_json === null ? undefined : parseJsonValue(JSON.parse(row.result_json));
   return jobSnapshotSchema.parse({
@@ -287,9 +284,9 @@ function rowToQuality(row: QualityRow): QualityMetric {
     valid_ballots: row.valid_ballots,
     abstentions: row.abstentions,
     failures: row.failures,
-    latency_samples_ms: z.array(z.number().int().nonnegative()).parse(
-      JSON.parse(row.latency_samples_json),
-    ),
+    latency_samples_ms: z
+      .array(z.number().int().nonnegative())
+      .parse(JSON.parse(row.latency_samples_json)),
     input_tokens: row.input_tokens,
     output_tokens: row.output_tokens,
     ...(row.cost_usd === null ? {} : { cost_usd: row.cost_usd }),
@@ -318,7 +315,9 @@ export class JobStore {
   }
 
   #jobRow(jobId: string): JobRow {
-    const row = this.#db.prepare<[string], JobRow>("SELECT * FROM jobs WHERE job_id = ?").get(jobId);
+    const row = this.#db
+      .prepare<[string], JobRow>("SELECT * FROM jobs WHERE job_id = ?")
+      .get(jobId);
     if (row === undefined) {
       throw new AppError("job_not_found", `Unknown job: ${jobId}`);
     }
@@ -327,15 +326,21 @@ export class JobStore {
 
   #appendEvent(jobId: string, eventType: string, payload: JsonValue, nowMs: number): void {
     const sequence = this.#db
-      .prepare<[string], { next_event_seq: number }>("SELECT next_event_seq FROM jobs WHERE job_id = ?")
+      .prepare<[string], { next_event_seq: number }>(
+        "SELECT next_event_seq FROM jobs WHERE job_id = ?",
+      )
       .get(jobId);
     if (sequence === undefined) {
       throw new AppError("job_not_found", `Unknown job: ${jobId}`);
     }
-    this.#db.prepare(
-      "INSERT INTO job_events(job_id, seq, event_type, payload_json, created_at_ms) VALUES (?, ?, ?, ?, ?)",
-    ).run(jobId, sequence.next_event_seq, eventType, canonicalJson(payload), nowMs);
-    this.#db.prepare("UPDATE jobs SET next_event_seq = next_event_seq + 1 WHERE job_id = ?").run(jobId);
+    this.#db
+      .prepare(
+        "INSERT INTO job_events(job_id, seq, event_type, payload_json, created_at_ms) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(jobId, sequence.next_event_seq, eventType, canonicalJson(payload), nowMs);
+    this.#db
+      .prepare("UPDATE jobs SET next_event_seq = next_event_seq + 1 WHERE job_id = ?")
+      .run(jobId);
   }
 
   #submission(job: JobSnapshot, deduplicated: boolean): Submission {
@@ -376,26 +381,38 @@ export class JobStore {
       }
 
       if (!forceNew) {
-        const existing = this.#db.prepare<[string, number], JobRow>(`
+        const existing = this.#db
+          .prepare<[string, number], JobRow>(`
           SELECT * FROM jobs
           WHERE request_fingerprint = ?
             AND (status IN ('queued', 'dispatching', 'running', 'recovery_required', 'cancelling')
               OR (status = 'succeeded' AND terminal_at_ms >= ?))
           ORDER BY created_at_ms, job_id
           LIMIT 1
-        `).get(fingerprint, nowMs - this.#options.dedupeSuccessMs);
+        `)
+          .get(fingerprint, nowMs - this.#options.dedupeSuccessMs);
         if (existing !== undefined) {
           return this.#submission(rowToJob(existing), true);
         }
       }
 
       const jobId = randomUUID();
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT INTO jobs(
           job_id, idempotency_key, request_fingerprint, canonical_request_json,
           question, status, execution_isolation, created_at_ms, updated_at_ms
         ) VALUES (?, ?, ?, ?, ?, 'queued', 'builtin_confined', ?, ?)
-      `).run(jobId, idempotencyKey ?? null, fingerprint, canonicalRequest, request.question, nowMs, nowMs);
+      `)
+        .run(
+          jobId,
+          idempotencyKey ?? null,
+          fingerprint,
+          canonicalRequest,
+          request.question,
+          nowMs,
+          nowMs,
+        );
       this.#appendEvent(jobId, "submitted", { status: "queued" }, nowMs);
       return this.#submission(rowToJob(this.#jobRow(jobId)), false);
     });
@@ -419,9 +436,9 @@ export class JobStore {
     if (options.cursor !== undefined) {
       let cursor: { created_at_ms: number; id: string };
       try {
-        cursor = z.strictObject({ created_at_ms: z.number().int(), id: z.string() }).parse(
-          JSON.parse(Buffer.from(options.cursor, "base64url").toString("utf8")),
-        );
+        cursor = z
+          .strictObject({ created_at_ms: z.number().int(), id: z.string() })
+          .parse(JSON.parse(Buffer.from(options.cursor, "base64url").toString("utf8")));
       } catch (error) {
         throw new AppError("invalid_cursor", errorMessage(error));
       }
@@ -435,7 +452,9 @@ export class JobStore {
     parameters.push(limit + 1);
     const where = conditions.length === 0 ? "" : `WHERE ${conditions.join(" AND ")}`;
     const rows = this.#db
-      .prepare<unknown[], JobRow>(`SELECT * FROM jobs ${where} ORDER BY created_at_ms, job_id LIMIT ?`)
+      .prepare<unknown[], JobRow>(
+        `SELECT * FROM jobs ${where} ORDER BY created_at_ms, job_id LIMIT ?`,
+      )
       .all(...parameters);
     const hasMore = rows.length > limit;
     const selected = hasMore ? rows.slice(0, limit) : rows;
@@ -456,7 +475,9 @@ export class JobStore {
   claimNext(buildId: string, configDigest: string, nowMs = Date.now()): JobSnapshot | undefined {
     return this.#immediate(() => {
       const row = this.#db
-        .prepare<[], JobRow>("SELECT * FROM jobs WHERE status = 'queued' ORDER BY created_at_ms, job_id LIMIT 1")
+        .prepare<[], JobRow>(
+          "SELECT * FROM jobs WHERE status = 'queued' ORDER BY created_at_ms, job_id LIMIT 1",
+        )
         .get();
       if (row === undefined) {
         return undefined;
@@ -464,22 +485,24 @@ export class JobStore {
       assertTransition(row.status, "dispatching");
       const leaseToken = randomUUID();
       const dispatchToken = randomUUID();
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET
           status = 'dispatching', row_version = row_version + 1,
           lease_token = ?, lease_expires_at_ms = ?, dispatch_token = ?,
           build_id = ?, config_digest = ?, updated_at_ms = ?
         WHERE job_id = ? AND status = 'queued' AND row_version = ?
-      `).run(
-        leaseToken,
-        nowMs + this.#options.leaseMs,
-        dispatchToken,
-        buildId,
-        configDigest,
-        nowMs,
-        row.job_id,
-        row.row_version,
-      );
+      `)
+        .run(
+          leaseToken,
+          nowMs + this.#options.leaseMs,
+          dispatchToken,
+          buildId,
+          configDigest,
+          nowMs,
+          row.job_id,
+          row.row_version,
+        );
       if (update.changes !== 1) {
         throw new AppError("lease_lost", `Failed to claim job ${row.job_id}`);
       }
@@ -499,12 +522,21 @@ export class JobStore {
     }
     return this.#immediate(() => {
       const workerLease = randomUUID();
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET
           status = 'running', row_version = row_version + 1,
           lease_token = ?, lease_expires_at_ms = ?, updated_at_ms = ?
         WHERE job_id = ? AND status = 'dispatching' AND dispatch_token = ? AND row_version = ?
-      `).run(workerLease, nowMs + this.#options.leaseMs, nowMs, jobId, dispatchToken, expectedVersion);
+      `)
+        .run(
+          workerLease,
+          nowMs + this.#options.leaseMs,
+          nowMs,
+          jobId,
+          dispatchToken,
+          expectedVersion,
+        );
       if (update.changes !== 1) {
         throw new AppError("dispatch_rejected", `Worker dispatch was rejected for ${jobId}`);
       }
@@ -523,10 +555,12 @@ export class JobStore {
       throw new AppError("lease_lost", `Missing lease token for ${jobId}`);
     }
     return this.#immediate(() => {
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET row_version = row_version + 1, lease_expires_at_ms = ?, updated_at_ms = ?
         WHERE job_id = ? AND status IN ('running', 'cancelling') AND lease_token = ? AND row_version = ?
-      `).run(nowMs + this.#options.leaseMs, nowMs, jobId, leaseToken, expectedVersion);
+      `)
+        .run(nowMs + this.#options.leaseMs, nowMs, jobId, leaseToken, expectedVersion);
       if (update.changes !== 1) {
         throw new AppError("lease_lost", `Lease was lost for ${jobId}`);
       }
@@ -542,11 +576,13 @@ export class JobStore {
         return rowToJob(row);
       }
       if (row.status === "queued") {
-        const update = this.#db.prepare(`
+        const update = this.#db
+          .prepare(`
           UPDATE jobs SET status = 'cancelled', row_version = row_version + 1,
             cancellation_reason = ?, updated_at_ms = ?, terminal_at_ms = ?
           WHERE job_id = ? AND status = 'queued' AND row_version = ?
-        `).run(reason ?? null, nowMs, nowMs, jobId, row.row_version);
+        `)
+          .run(reason ?? null, nowMs, nowMs, jobId, row.row_version);
         if (update.changes !== 1) {
           throw new AppError("invalid_transition", `Concurrent cancellation update for ${jobId}`);
         }
@@ -554,15 +590,22 @@ export class JobStore {
         return rowToJob(this.#jobRow(jobId));
       }
       assertTransition(row.status, "cancelling");
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET status = 'cancelling', row_version = row_version + 1,
           cancellation_reason = ?, updated_at_ms = ?
         WHERE job_id = ? AND status = ? AND row_version = ?
-      `).run(reason ?? null, nowMs, jobId, row.status, row.row_version);
+      `)
+        .run(reason ?? null, nowMs, jobId, row.status, row.row_version);
       if (update.changes !== 1) {
         throw new AppError("invalid_transition", `Concurrent cancellation update for ${jobId}`);
       }
-      this.#appendEvent(jobId, "cancellation_requested", reason === undefined ? {} : { reason }, nowMs);
+      this.#appendEvent(
+        jobId,
+        "cancellation_requested",
+        reason === undefined ? {} : { reason },
+        nowMs,
+      );
       return rowToJob(this.#jobRow(jobId));
     });
   }
@@ -572,7 +615,10 @@ export class JobStore {
     return this.#immediate(() => {
       const row = this.#jobRow(input.jobId);
       if (row.status !== input.expectedStatus) {
-        throw new AppError("invalid_transition", `Expected ${input.expectedStatus}, found ${row.status}`);
+        throw new AppError(
+          "invalid_transition",
+          `Expected ${input.expectedStatus}, found ${row.status}`,
+        );
       }
       assertTransition(row.status, input.nextStatus);
       if (input.leaseToken !== undefined && row.lease_token !== input.leaseToken) {
@@ -580,7 +626,8 @@ export class JobStore {
       }
       const terminalAt = isTerminalStatus(input.nextStatus) ? nowMs : null;
       const updates = input.updates;
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET
           status = ?, row_version = row_version + 1, updated_at_ms = ?, terminal_at_ms = ?,
           result_status = COALESCE(?, result_status), result_json = COALESCE(?, result_json),
@@ -588,21 +635,22 @@ export class JobStore {
           recovery_reason = COALESCE(?, recovery_reason)
         WHERE job_id = ? AND status = ? AND row_version = ?
           AND (? IS NULL OR lease_token = ?)
-      `).run(
-        input.nextStatus,
-        nowMs,
-        terminalAt,
-        updates?.resultStatus ?? null,
-        updates?.resultJson === undefined ? null : canonicalJson(updates.resultJson),
-        updates?.decisionId ?? null,
-        updates?.transcriptPath ?? null,
-        updates?.recoveryReason ?? null,
-        input.jobId,
-        input.expectedStatus,
-        input.expectedVersion,
-        input.leaseToken ?? null,
-        input.leaseToken ?? null,
-      );
+      `)
+        .run(
+          input.nextStatus,
+          nowMs,
+          terminalAt,
+          updates?.resultStatus ?? null,
+          updates?.resultJson === undefined ? null : canonicalJson(updates.resultJson),
+          updates?.decisionId ?? null,
+          updates?.transcriptPath ?? null,
+          updates?.recoveryReason ?? null,
+          input.jobId,
+          input.expectedStatus,
+          input.expectedVersion,
+          input.leaseToken ?? null,
+          input.leaseToken ?? null,
+        );
       if (update.changes !== 1) {
         throw new AppError("lease_lost", `Guarded transition failed for ${input.jobId}`);
       }
@@ -625,9 +673,11 @@ export class JobStore {
       if (row.request_fingerprint !== input.requestFingerprint) {
         throw new AppError("decision_publication_failed", "Request fingerprint mismatch");
       }
-      const existingOrigin = this.#db.prepare<[string], { decision_id: string }>(`
+      const existingOrigin = this.#db
+        .prepare<[string], { decision_id: string }>(`
         SELECT decision_id FROM decision_origins WHERE job_id = ?
-      `).get(input.jobId);
+      `)
+        .get(input.jobId);
       if (existingOrigin !== undefined) {
         throw new AppError(
           "decision_publication_conflict",
@@ -635,28 +685,32 @@ export class JobStore {
         );
       }
       const resultJson = canonicalJson(input.resultJson);
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET
           status = 'succeeded', row_version = row_version + 1, result_status = ?,
           result_json = ?, transcript_path = ?, terminal_at_ms = ?, updated_at_ms = ?
         WHERE job_id = ? AND status = 'running' AND row_version = ? AND lease_token = ?
-      `).run(
-        input.resultStatus,
-        resultJson,
-        input.transcriptPath,
-        nowMs,
-        nowMs,
-        input.jobId,
-        input.expectedVersion,
-        input.leaseToken,
-      );
+      `)
+        .run(
+          input.resultStatus,
+          resultJson,
+          input.transcriptPath,
+          nowMs,
+          nowMs,
+          input.jobId,
+          input.expectedVersion,
+          input.leaseToken,
+        );
       if (update.changes !== 1) {
         throw new AppError("lease_lost", `Publication guard failed for ${input.jobId}`);
       }
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT INTO workspaces(id, canonical_root, created_at_ms) VALUES (?, ?, ?)
         ON CONFLICT(id) DO NOTHING
-      `).run(input.workspaceId, input.canonicalRoot, nowMs);
+      `)
+        .run(input.workspaceId, input.canonicalRoot, nowMs);
       const request = startDeliberationInputSchema.parse(JSON.parse(row.canonical_request_json));
       const threadId = resolveContinuationThread({
         db: this.#db,
@@ -666,161 +720,181 @@ export class JobStore {
           : { continuationId: request.continuation_id }),
         nowMs,
       });
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT INTO decisions(
           id, workspace_id, thread_id, question, protocol, result_status, outcome_status,
           canonical_json, summary, execution_isolation, review_due_at_ms, created_at_ms, updated_at_ms
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        input.packet.decision_id,
-        input.workspaceId,
-        threadId,
-        input.packet.question,
-        input.packet.protocol,
-        input.resultStatus,
-        input.packet.ballot.outcome,
-        canonicalJson(parseJsonValue(input.packet)),
-        input.summary,
-        input.packet.execution_isolation,
-        input.packet.review_due_at_ms,
-        input.packet.created_at_ms,
-        nowMs,
-      );
-      this.#db.prepare(`
+      `)
+        .run(
+          input.packet.decision_id,
+          input.workspaceId,
+          threadId,
+          input.packet.question,
+          input.packet.protocol,
+          input.resultStatus,
+          input.packet.ballot.outcome,
+          canonicalJson(parseJsonValue(input.packet)),
+          input.summary,
+          input.packet.execution_isolation,
+          input.packet.review_due_at_ms,
+          input.packet.created_at_ms,
+          nowMs,
+        );
+      this.#db
+        .prepare(`
         INSERT INTO decision_origins(job_id, decision_id, request_fingerprint, committed_at_ms)
         VALUES (?, ?, ?, ?)
-      `).run(input.jobId, input.packet.decision_id, input.requestFingerprint, nowMs);
-      this.#db.prepare("UPDATE jobs SET decision_id = ? WHERE job_id = ?").run(
-        input.packet.decision_id,
-        input.jobId,
-      );
+      `)
+        .run(input.jobId, input.packet.decision_id, input.requestFingerprint, nowMs);
+      this.#db
+        .prepare("UPDATE jobs SET decision_id = ? WHERE job_id = ?")
+        .run(input.packet.decision_id, input.jobId);
       for (const participant of input.packet.participants) {
         const selection = input.packet.committee_selection.find(
           (item) => item.participant_id === participant.participant_id,
         );
-        this.#db.prepare(`
+        this.#db
+          .prepare(`
           INSERT INTO decision_participants(
             workspace_id, decision_id, participant_id, adapter, model, provider_family,
             reasoning_effort, selection_json
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          input.workspaceId,
-          input.packet.decision_id,
-          participant.participant_id,
-          participant.cli,
-          participant.model,
-          selection?.provider_family ?? participant.cli,
-          participant.reasoning_effort ?? null,
-          selection === undefined ? null : canonicalJson(parseJsonValue(selection)),
-        );
+        `)
+          .run(
+            input.workspaceId,
+            input.packet.decision_id,
+            participant.participant_id,
+            participant.cli,
+            participant.model,
+            selection?.provider_family ?? participant.cli,
+            participant.reasoning_effort ?? null,
+            selection === undefined ? null : canonicalJson(parseJsonValue(selection)),
+          );
       }
       for (const claim of input.packet.claims) {
-        this.#db.prepare(`
+        this.#db
+          .prepare(`
           INSERT INTO claims(
             id, workspace_id, decision_id, participant_id, claim_type, text, confidence, created_at_ms
           ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)
-        `).run(
-          claim.claim_id,
-          input.workspaceId,
-          input.packet.decision_id,
-          claim.type,
-          claim.text,
-          claim.confidence,
-          nowMs,
-        );
+        `)
+          .run(
+            claim.claim_id,
+            input.workspaceId,
+            input.packet.decision_id,
+            claim.type,
+            claim.text,
+            claim.confidence,
+            nowMs,
+          );
       }
       for (const prediction of input.packet.predictions) {
-        this.#db.prepare(`
+        this.#db
+          .prepare(`
           INSERT INTO claims(
             id, workspace_id, decision_id, participant_id, claim_type, text, confidence, created_at_ms
           ) VALUES (?, ?, ?, ?, 'prediction', ?, ?, ?)
-        `).run(
-          prediction.prediction_id,
-          input.workspaceId,
-          input.packet.decision_id,
-          prediction.participant_id,
-          prediction.statement,
-          prediction.probability,
-          nowMs,
-        );
-        this.#db.prepare(`
+        `)
+          .run(
+            prediction.prediction_id,
+            input.workspaceId,
+            input.packet.decision_id,
+            prediction.participant_id,
+            prediction.statement,
+            prediction.probability,
+            nowMs,
+          );
+        this.#db
+          .prepare(`
           INSERT INTO predictions(
             id, workspace_id, decision_id, claim_id, participant_id, adapter, model, domain,
             probability, target_date, resolution_criteria
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          prediction.prediction_id,
-          input.workspaceId,
-          input.packet.decision_id,
-          prediction.prediction_id,
-          prediction.participant_id,
-          prediction.adapter,
-          prediction.model,
-          prediction.domain,
-          prediction.probability,
-          prediction.target_date,
-          prediction.resolution_criteria,
-        );
+        `)
+          .run(
+            prediction.prediction_id,
+            input.workspaceId,
+            input.packet.decision_id,
+            prediction.prediction_id,
+            prediction.participant_id,
+            prediction.adapter,
+            prediction.model,
+            prediction.domain,
+            prediction.probability,
+            prediction.target_date,
+            prediction.resolution_criteria,
+          );
       }
       for (const evidence of input.packet.evidence) {
-        this.#db.prepare(`
+        this.#db
+          .prepare(`
           INSERT INTO evidence(
             id, workspace_id, decision_id, source_type, canonical_uri, locator, content_hash,
             captured_commit_sha, captured_at_ms, tool_or_adapter, execution_isolation,
             redaction_status, expires_at_ms
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          evidence.evidence_id,
-          input.workspaceId,
-          input.packet.decision_id,
-          evidence.source_type,
-          evidence.canonical_uri,
-          evidence.locator ?? null,
-          evidence.content_hash,
-          evidence.captured_commit_sha ?? null,
-          evidence.captured_at_ms,
-          evidence.tool_or_adapter,
-          evidence.execution_isolation,
-          evidence.redaction_status,
-          evidence.expires_at_ms ?? null,
-        );
+        `)
+          .run(
+            evidence.evidence_id,
+            input.workspaceId,
+            input.packet.decision_id,
+            evidence.source_type,
+            evidence.canonical_uri,
+            evidence.locator ?? null,
+            evidence.content_hash,
+            evidence.captured_commit_sha ?? null,
+            evidence.captured_at_ms,
+            evidence.tool_or_adapter,
+            evidence.execution_isolation,
+            evidence.redaction_status,
+            evidence.expires_at_ms ?? null,
+          );
         if (evidence.claim_id !== undefined) {
-          this.#db.prepare(`
+          this.#db
+            .prepare(`
             INSERT INTO claim_evidence(workspace_id, claim_id, evidence_id, polarity, is_critical)
             VALUES (?, ?, ?, ?, 0)
-          `).run(
-            input.workspaceId,
-            evidence.claim_id,
-            evidence.evidence_id,
-            evidence.polarity,
-          );
+          `)
+            .run(input.workspaceId, evidence.claim_id, evidence.evidence_id, evidence.polarity);
         }
       }
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT INTO derived_operations(
           operation_key, operation_type, decision_id, status, created_at_ms, updated_at_ms
         ) VALUES (?, 'similarity_index', ?, 'queued', ?, ?)
-      `).run(`similarity:${input.packet.decision_id}`, input.packet.decision_id, nowMs, nowMs);
-      this.#appendEvent(input.jobId, "completed", {
-        result_status: input.resultStatus,
-        decision_id: input.packet.decision_id,
-      }, nowMs);
+      `)
+        .run(`similarity:${input.packet.decision_id}`, input.packet.decision_id, nowMs, nowMs);
+      this.#appendEvent(
+        input.jobId,
+        "completed",
+        {
+          result_status: input.resultStatus,
+          decision_id: input.packet.decision_id,
+        },
+        nowMs,
+      );
       return rowToJob(this.#jobRow(input.jobId));
     });
   }
 
   events(jobId: string, afterSeq = 0, limit = 100): JobEvent[] {
-    return this.#db.prepare<[string, number, number], EventRow>(`
+    return this.#db
+      .prepare<[string, number, number], EventRow>(`
       SELECT * FROM job_events WHERE job_id = ? AND seq > ? ORDER BY seq LIMIT ?
-    `).all(jobId, afterSeq, Math.min(Math.max(limit, 1), 500)).map((row) =>
-      jobEventSchema.parse({
-        job_id: row.job_id,
-        seq: row.seq,
-        event_type: row.event_type,
-        payload: parseJsonValue(JSON.parse(row.payload_json)),
-        created_at_ms: row.created_at_ms,
-      }),
-    );
+    `)
+      .all(jobId, afterSeq, Math.min(Math.max(limit, 1), 500))
+      .map((row) =>
+        jobEventSchema.parse({
+          job_id: row.job_id,
+          seq: row.seq,
+          event_type: row.event_type,
+          payload: parseJsonValue(JSON.parse(row.payload_json)),
+          created_at_ms: row.created_at_ms,
+        }),
+      );
   }
 
   attempts(jobId: string): JobAttempt[] {
@@ -835,21 +909,20 @@ export class JobStore {
   createAttempt(input: CreateAttemptInput): JobAttempt {
     const nowMs = input.nowMs ?? Date.now();
     return this.#immediate(() => {
-      const existing = this.#db.prepare<
-        [string, string, string, string, string],
-        AttemptRow
-      >(`
+      const existing = this.#db
+        .prepare<[string, string, string, string, string], AttemptRow>(`
         SELECT * FROM job_attempts
         WHERE job_id = ? AND stage_id = ? AND participant_id = ?
           AND attempt_kind = ? AND request_digest = ?
         ORDER BY ordinal DESC LIMIT 1
-      `).get(
-        input.jobId,
-        input.stageId,
-        input.participantId,
-        input.attemptKind,
-        input.requestDigest,
-      );
+      `)
+        .get(
+          input.jobId,
+          input.stageId,
+          input.participantId,
+          input.attemptKind,
+          input.requestDigest,
+        );
       if (
         existing !== undefined &&
         (existing.status === "succeeded" ||
@@ -860,22 +933,24 @@ export class JobStore {
       }
       const ordinal = existing === undefined ? input.ordinal : existing.ordinal + 1;
       const attemptId = randomUUID();
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT INTO job_attempts(
           attempt_id, job_id, stage_id, participant_id, attempt_kind, ordinal,
           request_digest, status, execution_isolation, created_at_ms
         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
-      `).run(
-        attemptId,
-        input.jobId,
-        input.stageId,
-        input.participantId,
-        input.attemptKind,
-        ordinal,
-        input.requestDigest,
-        input.executionIsolation,
-        nowMs,
-      );
+      `)
+        .run(
+          attemptId,
+          input.jobId,
+          input.stageId,
+          input.participantId,
+          input.attemptKind,
+          ordinal,
+          input.requestDigest,
+          input.executionIsolation,
+          nowMs,
+        );
       const inserted = this.#db
         .prepare<[string], AttemptRow>("SELECT * FROM job_attempts WHERE attempt_id = ?")
         .get(attemptId);
@@ -887,14 +962,18 @@ export class JobStore {
   }
 
   markAttemptStarted(attemptId: string, externalStarted: boolean, nowMs = Date.now()): JobAttempt {
-    const update = this.#db.prepare(`
+    const update = this.#db
+      .prepare(`
       UPDATE job_attempts SET status = 'started', external_started = ?, started_at_ms = ?
       WHERE attempt_id = ? AND status = 'pending'
-    `).run(externalStarted ? 1 : 0, nowMs, attemptId);
+    `)
+      .run(externalStarted ? 1 : 0, nowMs, attemptId);
     if (update.changes !== 1) {
       throw new AppError("invalid_attempt_transition", `Cannot start attempt ${attemptId}`);
     }
-    const row = this.#db.prepare<[string], AttemptRow>("SELECT * FROM job_attempts WHERE attempt_id = ?").get(attemptId);
+    const row = this.#db
+      .prepare<[string], AttemptRow>("SELECT * FROM job_attempts WHERE attempt_id = ?")
+      .get(attemptId);
     if (row === undefined) {
       throw new AppError("attempt_not_found", attemptId);
     }
@@ -911,29 +990,33 @@ export class JobStore {
     if (status === "pending" || status === "started") {
       throw new AppError("invalid_attempt_transition", `${status} is not terminal`);
     }
-    const update = this.#db.prepare(`
+    const update = this.#db
+      .prepare(`
       UPDATE job_attempts SET status = ?, response_id = ?, response_digest = ?, raw_response = ?,
         error_type = ?, error_message = ?, latency_ms = ?, input_tokens = ?, output_tokens = ?,
         cost_usd = ?, terminal_at_ms = ?
       WHERE attempt_id = ? AND status IN ('pending', 'started')
-    `).run(
-      status,
-      details.responseId ?? null,
-      details.responseDigest ?? null,
-      details.rawResponse ?? null,
-      details.errorType ?? null,
-      details.errorMessage ?? null,
-      details.latencyMs ?? null,
-      details.inputTokens ?? null,
-      details.outputTokens ?? null,
-      details.costUsd ?? null,
-      nowMs,
-      attemptId,
-    );
+    `)
+      .run(
+        status,
+        details.responseId ?? null,
+        details.responseDigest ?? null,
+        details.rawResponse ?? null,
+        details.errorType ?? null,
+        details.errorMessage ?? null,
+        details.latencyMs ?? null,
+        details.inputTokens ?? null,
+        details.outputTokens ?? null,
+        details.costUsd ?? null,
+        nowMs,
+        attemptId,
+      );
     if (update.changes !== 1) {
       throw new AppError("invalid_attempt_transition", `Cannot finish attempt ${attemptId}`);
     }
-    const row = this.#db.prepare<[string], AttemptRow>("SELECT * FROM job_attempts WHERE attempt_id = ?").get(attemptId);
+    const row = this.#db
+      .prepare<[string], AttemptRow>("SELECT * FROM job_attempts WHERE attempt_id = ?")
+      .get(attemptId);
     if (row === undefined) {
       throw new AppError("attempt_not_found", attemptId);
     }
@@ -950,28 +1033,34 @@ export class JobStore {
         )
         .get(jobId);
       const sequence = (latest?.checkpoint_seq ?? 0) + 1;
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT OR IGNORE INTO job_checkpoints(job_id, checkpoint_seq, stage_id, state_json, state_digest, created_at_ms)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(jobId, sequence, stageId, stateJson, digest, nowMs);
+      `)
+        .run(jobId, sequence, stageId, stateJson, digest, nowMs);
       return sequence;
     });
   }
 
   latestCheckpoint(jobId: string): JsonValue | undefined {
-    const row = this.#db.prepare<[string], { state_json: string }>(`
+    const row = this.#db
+      .prepare<[string], { state_json: string }>(`
       SELECT state_json FROM job_checkpoints WHERE job_id = ? ORDER BY checkpoint_seq DESC LIMIT 1
-    `).get(jobId);
+    `)
+      .get(jobId);
     return row === undefined ? undefined : parseJsonValue(JSON.parse(row.state_json));
   }
 
   recoverStale(nowMs = Date.now()): { jobId: string; action: string }[] {
-    const stale = this.#db.prepare<[number], JobRow>(`
+    const stale = this.#db
+      .prepare<[number], JobRow>(`
       SELECT * FROM jobs
       WHERE status IN ('dispatching', 'running')
         AND lease_expires_at_ms IS NOT NULL AND lease_expires_at_ms < ?
       ORDER BY created_at_ms, job_id
-    `).all(nowMs);
+    `)
+      .all(nowMs);
     const recovered: { jobId: string; action: string }[] = [];
     for (const staleRow of stale) {
       const action = this.#immediate(() => {
@@ -980,48 +1069,65 @@ export class JobStore {
           return "concurrent_update";
         }
         if (row.status === "dispatching") {
-          const update = this.#db.prepare(`
+          const update = this.#db
+            .prepare(`
             UPDATE jobs SET status = 'queued', row_version = row_version + 1,
               lease_token = NULL, lease_expires_at_ms = NULL, dispatch_token = NULL,
               updated_at_ms = ?
             WHERE job_id = ? AND status = 'dispatching' AND row_version = ?
-          `).run(nowMs, row.job_id, row.row_version);
+          `)
+            .run(nowMs, row.job_id, row.row_version);
           if (update.changes !== 1) return "concurrent_update";
           this.#appendEvent(row.job_id, "stale_dispatch_requeued", {}, nowMs);
           return "requeued_dispatch";
         }
-        const openAttempt = this.#db.prepare<[string], AttemptRow>(`
+        const openAttempt = this.#db
+          .prepare<[string], AttemptRow>(`
           SELECT * FROM job_attempts
           WHERE job_id = ? AND status = 'started' AND external_started = 1
           ORDER BY created_at_ms, attempt_id LIMIT 1
-        `).get(row.job_id);
+        `)
+          .get(row.job_id);
         if (openAttempt !== undefined) {
-          this.#db.prepare(`
+          this.#db
+            .prepare(`
             UPDATE job_attempts SET status = 'uncertain', terminal_at_ms = ?
             WHERE attempt_id = ? AND status = 'started'
-          `).run(nowMs, openAttempt.attempt_id);
-          const update = this.#db.prepare(`
+          `)
+            .run(nowMs, openAttempt.attempt_id);
+          const update = this.#db
+            .prepare(`
             UPDATE jobs SET status = 'recovery_required', row_version = row_version + 1,
               recovery_reason = 'uncertain_external_attempt', updated_at_ms = ?
             WHERE job_id = ? AND status = 'running' AND row_version = ?
-          `).run(nowMs, row.job_id, row.row_version);
+          `)
+            .run(nowMs, row.job_id, row.row_version);
           if (update.changes !== 1) return "concurrent_update";
-          this.#appendEvent(row.job_id, "recovery_required", {
-            attempt_id: openAttempt.attempt_id,
-            reason: "uncertain_external_attempt",
-          }, nowMs);
+          this.#appendEvent(
+            row.job_id,
+            "recovery_required",
+            {
+              attempt_id: openAttempt.attempt_id,
+              reason: "uncertain_external_attempt",
+            },
+            nowMs,
+          );
           return "recovery_required";
         }
-        const checkpoint = this.#db.prepare<[string], { present: number }>(`
+        const checkpoint = this.#db
+          .prepare<[string], { present: number }>(`
           SELECT 1 AS present FROM job_checkpoints WHERE job_id = ? LIMIT 1
-        `).get(row.job_id);
+        `)
+          .get(row.job_id);
         const nextStatus = checkpoint === undefined ? "recovery_required" : "queued";
         const reason = checkpoint === undefined ? "missing_checkpoint" : null;
-        const update = this.#db.prepare(`
+        const update = this.#db
+          .prepare(`
           UPDATE jobs SET status = ?, row_version = row_version + 1, recovery_reason = ?,
             lease_token = NULL, lease_expires_at_ms = NULL, dispatch_token = NULL, updated_at_ms = ?
           WHERE job_id = ? AND status = 'running' AND row_version = ?
-        `).run(nextStatus, reason, nowMs, row.job_id, row.row_version);
+        `)
+          .run(nextStatus, reason, nowMs, row.job_id, row.row_version);
         if (update.changes !== 1) return "concurrent_update";
         this.#appendEvent(
           row.job_id,
@@ -1039,16 +1145,19 @@ export class JobStore {
   }
 
   runningProcesses(jobId: string): RunningProcess[] {
-    return this.#db.prepare<[string], ProcessRow>(`
+    return this.#db
+      .prepare<[string], ProcessRow>(`
       SELECT process_id, pid, pid_started_at_ms, process_group_id
       FROM job_processes WHERE job_id = ? AND status = 'running'
       ORDER BY created_at_ms, process_id
-    `).all(jobId).map((row) => ({
-      processId: row.process_id,
-      pid: row.pid,
-      startedAtMs: row.pid_started_at_ms,
-      ...(row.process_group_id === null ? {} : { processGroupId: row.process_group_id }),
-    }));
+    `)
+      .all(jobId)
+      .map((row) => ({
+        processId: row.process_id,
+        pid: row.pid,
+        startedAtMs: row.pid_started_at_ms,
+        ...(row.process_group_id === null ? {} : { processGroupId: row.process_group_id }),
+      }));
   }
 
   registerProcess(input: {
@@ -1062,28 +1171,32 @@ export class JobStore {
   }): string {
     const processId = randomUUID();
     const nowMs = input.nowMs ?? Date.now();
-    this.#db.prepare(`
+    this.#db
+      .prepare(`
       INSERT INTO job_processes(
         process_id, job_id, attempt_id, pid, pid_started_at_ms, process_group_id, role, status, created_at_ms
       ) VALUES (?, ?, ?, ?, ?, ?, ?, 'running', ?)
-    `).run(
-      processId,
-      input.jobId,
-      input.attemptId ?? null,
-      input.pid,
-      input.pidStartedAtMs,
-      input.processGroupId ?? null,
-      input.role,
-      nowMs,
-    );
+    `)
+      .run(
+        processId,
+        input.jobId,
+        input.attemptId ?? null,
+        input.pid,
+        input.pidStartedAtMs,
+        input.processGroupId ?? null,
+        input.role,
+        nowMs,
+      );
     return processId;
   }
 
   markProcessExited(processId: string, cleanupUncertain = false, nowMs = Date.now()): void {
-    const update = this.#db.prepare(`
+    const update = this.#db
+      .prepare(`
       UPDATE job_processes SET status = ?, exited_at_ms = ?
       WHERE process_id = ? AND status = 'running'
-    `).run(cleanupUncertain ? "cleanup_uncertain" : "exited", nowMs, processId);
+    `)
+      .run(cleanupUncertain ? "cleanup_uncertain" : "exited", nowMs, processId);
     if (update.changes !== 1) {
       throw new AppError("process_not_found", `Running process not found: ${processId}`);
     }
@@ -1094,28 +1207,34 @@ export class JobStore {
     cleanupUncertain = false,
     nowMs = Date.now(),
   ): number {
-    return this.#db.prepare(`
+    return this.#db
+      .prepare(`
       UPDATE job_processes SET status = ?, exited_at_ms = ?
       WHERE attempt_id = ? AND status = 'running'
-    `).run(cleanupUncertain ? "cleanup_uncertain" : "exited", nowMs, attemptId).changes;
+    `)
+      .run(cleanupUncertain ? "cleanup_uncertain" : "exited", nowMs, attemptId).changes;
   }
 
   recordQuality(sample: QualitySample): QualityMetric {
     const nowMs = sample.nowMs ?? Date.now();
     return this.#immediate(() => {
-      const current = this.#db.prepare<[string, string, string], QualityRow>(`
+      const current = this.#db
+        .prepare<[string, string, string], QualityRow>(`
         SELECT * FROM quality_metrics WHERE adapter = ? AND model = ? AND domain = ?
-      `).get(sample.adapter, sample.model, sample.domain);
-      const latencies = current === undefined
-        ? []
-        : z.array(z.number().int().nonnegative()).parse(JSON.parse(current.latency_samples_json));
+      `)
+        .get(sample.adapter, sample.model, sample.domain);
+      const latencies =
+        current === undefined
+          ? []
+          : z.array(z.number().int().nonnegative()).parse(JSON.parse(current.latency_samples_json));
       if (sample.latencyMs !== undefined) {
         latencies.push(sample.latencyMs);
         if (latencies.length > 50) {
           latencies.splice(0, latencies.length - 50);
         }
       }
-      this.#db.prepare(`
+      this.#db
+        .prepare(`
         INSERT INTO quality_metrics(
           adapter, model, domain, attempts, valid_attempts, valid_ballots, abstentions, failures,
           latency_samples_json, input_tokens, output_tokens, cost_usd, resolved_predictions, brier_sum, updated_at_ms
@@ -1136,34 +1255,42 @@ export class JobStore {
           resolved_predictions = resolved_predictions + excluded.resolved_predictions,
           brier_sum = brier_sum + excluded.brier_sum,
           updated_at_ms = excluded.updated_at_ms
-      `).run(
-        sample.adapter,
-        sample.model,
-        sample.domain,
-        sample.countAttempt === false ? 0 : 1,
-        sample.valid_attempt === true ? 1 : 0,
-        sample.valid_ballot === true ? 1 : 0,
-        sample.abstention === true ? 1 : 0,
-        sample.failure === true ? 1 : 0,
-        JSON.stringify(latencies),
-        sample.inputTokens ?? 0,
-        sample.outputTokens ?? 0,
-        sample.costUsd ?? null,
-        sample.resolvedPrediction === true ? 1 : 0,
-        sample.brierScore ?? 0,
-        nowMs,
-      );
-      const stored = this.#db.prepare<[string, string, string], QualityRow>(`
+      `)
+        .run(
+          sample.adapter,
+          sample.model,
+          sample.domain,
+          sample.countAttempt === false ? 0 : 1,
+          sample.valid_attempt === true ? 1 : 0,
+          sample.valid_ballot === true ? 1 : 0,
+          sample.abstention === true ? 1 : 0,
+          sample.failure === true ? 1 : 0,
+          JSON.stringify(latencies),
+          sample.inputTokens ?? 0,
+          sample.outputTokens ?? 0,
+          sample.costUsd ?? null,
+          sample.resolvedPrediction === true ? 1 : 0,
+          sample.brierScore ?? 0,
+          nowMs,
+        );
+      const stored = this.#db
+        .prepare<[string, string, string], QualityRow>(`
         SELECT * FROM quality_metrics WHERE adapter = ? AND model = ? AND domain = ?
-      `).get(sample.adapter, sample.model, sample.domain);
+      `)
+        .get(sample.adapter, sample.model, sample.domain);
       if (stored === undefined) {
-        throw new AppError("quality_metric_not_found", `Missing metric for ${sample.adapter}/${sample.model}`);
+        throw new AppError(
+          "quality_metric_not_found",
+          `Missing metric for ${sample.adapter}/${sample.model}`,
+        );
       }
       return rowToQuality(stored);
     });
   }
 
-  listQuality(filters: { adapter?: string; model?: string; domain?: string } = {}): QualityMetric[] {
+  listQuality(
+    filters: { adapter?: string; model?: string; domain?: string } = {},
+  ): QualityMetric[] {
     const conditions: string[] = [];
     const parameters: string[] = [];
     for (const [column, value] of [
@@ -1185,11 +1312,7 @@ export class JobStore {
       .map((row) => rowToQuality(row));
   }
 
-  resumeRecovery(
-    jobId: string,
-    policy: "retry" | "cancel",
-    nowMs = Date.now(),
-  ): JobSnapshot {
+  resumeRecovery(jobId: string, policy: "retry" | "cancel", nowMs = Date.now()): JobSnapshot {
     return this.#immediate(() => {
       const row = this.#jobRow(jobId);
       if (row.status !== "recovery_required") {
@@ -1197,19 +1320,15 @@ export class JobStore {
       }
       const nextStatus = policy === "retry" ? "queued" : "cancelled";
       assertTransition(row.status, nextStatus);
-      const update = this.#db.prepare(`
+      const update = this.#db
+        .prepare(`
         UPDATE jobs SET
           status = ?, row_version = row_version + 1, lease_token = NULL,
           lease_expires_at_ms = NULL, dispatch_token = NULL, updated_at_ms = ?,
           terminal_at_ms = ?
         WHERE job_id = ? AND status = 'recovery_required' AND row_version = ?
-      `).run(
-        nextStatus,
-        nowMs,
-        nextStatus === "cancelled" ? nowMs : null,
-        jobId,
-        row.row_version,
-      );
+      `)
+        .run(nextStatus, nowMs, nextStatus === "cancelled" ? nowMs : null, jobId, row.row_version);
       if (update.changes !== 1) {
         throw new AppError("invalid_transition", `Concurrent recovery update for ${jobId}`);
       }
@@ -1224,11 +1343,13 @@ export class JobStore {
   }
 
   purgeTerminalJobs(nowMs: number, retentionMs: number): number {
-    const result = this.#db.prepare(`
+    const result = this.#db
+      .prepare(`
       DELETE FROM jobs
       WHERE status IN ('succeeded', 'failed', 'cancelled')
         AND terminal_at_ms IS NOT NULL AND terminal_at_ms < ?
-    `).run(nowMs - retentionMs);
+    `)
+      .run(nowMs - retentionMs);
     return result.changes;
   }
 }
