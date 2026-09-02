@@ -161,6 +161,7 @@ describe("compiled MCP over Streamable HTTP", () => {
         participants,
       },
     })).structuredContent);
+    expect(started).toHaveProperty("job_id");
     const jobId = z.uuid().parse(started.job_id);
 
     const terminal = objectSchema.parse((await client.callTool({
@@ -206,6 +207,7 @@ describe("compiled MCP over Streamable HTTP", () => {
         participants,
       },
     })).structuredContent);
+    expect(started).toHaveProperty("job_id");
     const jobId = z.uuid().parse(started.job_id);
     const jobUri = `rostra://deliberations/${jobId}`;
 

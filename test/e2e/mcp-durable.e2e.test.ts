@@ -123,6 +123,7 @@ describe("compiled durable MCP", () => {
         idempotency_key: idempotencyKey,
       },
     })).structuredContent);
+    expect(started).toHaveProperty("job_id");
     const jobId = z.uuid().parse(started.job_id);
     await firstClient.close();
 

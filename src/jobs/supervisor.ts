@@ -144,8 +144,7 @@ export async function ensureSupervisor(options: EnsureSupervisorOptions): Promis
       existing?.owner_token === ownerToken &&
       existing.status === "ready" &&
       existing.build_id === options.buildId &&
-      existing.config_digest === options.configDigest &&
-      (await verifiedSupervisor(existing, provider))
+      existing.config_digest === options.configDigest
     ) {
       return;
     }
