@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { pathToFileURL } from "node:url";
+import { isMainModule } from "../utils/is-main-module.js";
 import { z } from "zod/v4";
 import { loadConfig } from "../config/loader.js";
 import { ConfiguredProtocolRunner } from "../deliberation/runner.js";
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   });
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   main().catch((error: unknown) => {
     process.stderr.write(`${errorMessage(error)}\n`);
     process.exitCode = 1;

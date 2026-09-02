@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isMainModule } from "../utils/is-main-module.js";
 import { z } from "zod/v4";
 import { initialize } from "./init.js";
 import { loadConfig } from "../config/loader.js";
@@ -190,7 +190,7 @@ export async function runCli(args: readonly string[]): Promise<void> {
   throw new AppError("invalid_command", `Unknown command: ${args.join(" ")}`);
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   runCli(process.argv.slice(2)).catch((error: unknown) => {
     process.stderr.write(`${errorMessage(error)}\n`);
     process.exitCode = 1;

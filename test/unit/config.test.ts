@@ -1,6 +1,6 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../src/config/loader.js";
 import { resolveConfigPath, resolveDataHome } from "../../src/config/paths.js";
@@ -50,9 +50,9 @@ describe("configuration v2", () => {
   });
 
   it("derives data home with explicit and XDG precedence", () => {
-    expect(resolveDataHome({ env: { ROSTRA_DATA_HOME: "/data/explicit" }, homeDir: "/home/user" })).toBe("/data/explicit");
-    expect(resolveDataHome({ env: { XDG_DATA_HOME: "/data/xdg" }, homeDir: "/home/user" })).toBe("/data/xdg/rostra");
-    expect(resolveDataHome({ env: {}, homeDir: "/home/user" })).toBe("/home/user/.local/share/rostra");
+    expect(resolveDataHome({ env: { ROSTRA_DATA_HOME: "/data/explicit" }, homeDir: "/home/user" })).toBe(resolve("/data/explicit"));
+    expect(resolveDataHome({ env: { XDG_DATA_HOME: "/data/xdg" }, homeDir: "/home/user" })).toBe(join(resolve("/data/xdg"), "rostra"));
+    expect(resolveDataHome({ env: {}, homeDir: "/home/user" })).toBe(join(resolve("/home/user"), ".local", "share", "rostra"));
   });
 
   it("rejects legacy versions and unknown top-level sections", async () => {

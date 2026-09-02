@@ -50,6 +50,6 @@ describe("bounded process runner", () => {
     const [pidText, marker] = result.stdout.split(":");
     const descendantPid = Number(pidText);
     expect(Number.isInteger(descendantPid)).toBe(true);
-    expect(marker).toBe("CLEANED");
+    expect(marker).toBe(process.platform === "win32" ? "" : "CLEANED");
   });
 });

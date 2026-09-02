@@ -20,7 +20,8 @@ if (
   packageValue.mcpName !== serverValue.name ||
   packageValue.version !== serverValue.version ||
   packageValue.name !== npmPackage?.identifier ||
-  packageValue.version !== npmPackage.version
+  packageValue.version !== npmPackage.version ||
+  packageValue.bin?.rostra !== "dist/cli/main.js"
 ) {
   throw new Error("package.json and server.json release metadata do not match");
 }
@@ -54,29 +55,30 @@ storage: {}
 decision_graph: {}
 `);
 
-  const cli = join(
+  const cliShim = join(installRoot, "node_modules", ".bin", "rostra");
+  const cliEntrypoint = join(
     installRoot,
     "node_modules",
-    ".bin",
-    process.platform === "win32" ? "rostra.cmd" : "rostra",
+    ...packageValue.name.split("/"),
+    packageValue.bin.rostra,
   );
+  const cliCommand = process.platform === "win32" ? process.execPath : cliShim;
+  const cliPrefix = process.platform === "win32" ? [cliEntrypoint] : [];
   const env = {
     ...process.env,
     ROSTRA_CONFIG: configPath,
     ROSTRA_DATA_HOME: dataHome,
   };
-  const initOutput = execFileSync(cli, ["init"], {
+  const runCli = (args) => execFileSync(cliCommand, [...cliPrefix, ...args], {
     encoding: "utf8",
     env,
   });
+  const initOutput = runCli(["init"]);
   if (!initOutput.includes(`Kept existing configuration: ${configPath}`)) {
     throw new Error(`Unexpected init output: ${initOutput}`);
   }
 
-  const jobsOutput = execFileSync(cli, ["jobs", "list"], {
-    encoding: "utf8",
-    env,
-  });
+  const jobsOutput = runCli(["jobs", "list"]);
   const jobs = JSON.parse(jobsOutput);
   if (!Array.isArray(jobs.jobs) || jobs.jobs.length !== 0) {
     throw new Error(`Unexpected jobs output: ${jobsOutput}`);

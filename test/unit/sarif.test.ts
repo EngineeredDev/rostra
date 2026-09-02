@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { Ajv } from "ajv/dist/ajv.js";
 import { z } from "zod/v4";
 import { describe, expect, it } from "vitest";
@@ -40,7 +41,7 @@ describe("SARIF 2.1.0 output", () => {
       version: "2.1.0",
       runs: [{
         tool: { driver: { name: "rostra-decision-ci", version: PACKAGE_VERSION } },
-        originalUriBaseIds: { "%SRCROOT%": { uri: "file:///workspace/" } },
+        originalUriBaseIds: { "%SRCROOT%": { uri: pathToFileURL("/workspace/").href } },
         results: [{
           ruleId: "stale_evidence",
           level: "error",
