@@ -83,7 +83,6 @@ export async function runWorker(options: WorkerOptions): Promise<JobSnapshot | u
         context.cancel("Worker lease was lost");
       }
     }, options.config.jobs.heartbeat_ms);
-    heartbeat.unref();
 
     const execution = await options.runner.execute(running, context);
     await context.cleanup();
