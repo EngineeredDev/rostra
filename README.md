@@ -1,6 +1,4 @@
-![A Roman orator addressing a civic audience from the Rostra, with bronze ship rams mounted across the platform](assets/rostra-hero.png)
-
-# Rostra
+![Rostra — a Roman orator addressing a civic audience from a stone podium carved with the name ROSTRA](assets/rostra-hero.png)
 
 Rostra is a TypeScript MCP server for durable, evidence-backed deliberation and Decision CI.
 
