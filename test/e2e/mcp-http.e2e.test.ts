@@ -62,7 +62,12 @@ afterEach(async () => {
   }
   await Promise.all(exits);
   await reap(pids);
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  await Promise.all(roots.splice(0).map((root) => rm(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 50,
+    retryDelay: 100,
+  })));
 });
 
 async function freePort(): Promise<number> {

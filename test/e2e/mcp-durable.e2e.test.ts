@@ -44,7 +44,12 @@ afterEach(async () => {
     if (!alive) break;
     await new Promise<void>((resolvePromise) => setTimeout(resolvePromise, 20));
   }
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  await Promise.all(roots.splice(0).map((root) => rm(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 50,
+    retryDelay: 100,
+  })));
 });
 
 async function fixture(): Promise<{ configPath: string; dataHome: string; env: Record<string, string> }> {
