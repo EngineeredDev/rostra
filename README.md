@@ -1,8 +1,8 @@
 ![Rostra — a Roman orator addressing a civic audience from a stone podium carved with the name ROSTRA](assets/rostra-hero.png)
 
-Rostra is a TypeScript MCP server for durable, evidence-backed deliberation and Decision CI.
+> The famous Rostra in the Roman Forum, decorated with the bronze beaks  of captured enemy ships, where public speakers would stand
 
-It runs model work in detached worker processes. Clients can disconnect and reconnect without losing job state. The server stores jobs, decisions, evidence, outcomes, and quality metrics in one SQLite database.
+Rostra is an MCP server for durable, evidence-backed deliberation and decision making harnessing the power of multiple LLM models/harnesses.
 
 ## Deliberation protocols
 
@@ -38,13 +38,6 @@ The final ballot requires a two-thirds quorum. Rostra reports ballot consensus s
 
 Custom protocols can change stage order, visibility, minimum completions, evidence permissions, and stopping policies. They can also add experiment-proposal stages.
 
-## Architecture
-
-- The MCP process validates requests and records durable jobs in SQLite.
-- A detached supervisor claims queued jobs and starts one separate worker process for each job.
-- Workers run configured CLI or HTTP model adapters, publish decision packets, and write Markdown transcripts.
-- Stdio and Streamable HTTP expose the same tools, resources, storage, and worker pool.
-
 ## Requirements
 
 - Node.js 24 or newer
@@ -68,7 +61,6 @@ rostra init
 ```bash
 git clone https://github.com/EngineeredDev/rostra.git
 cd rostra
-corepack enable
 pnpm install --frozen-lockfile
 pnpm build
 node dist/cli/main.js init
@@ -95,7 +87,7 @@ Rostra writes `rostra.sqlite`, transcripts, and model files to the data director
 
 ### Configuration
 
-The version 2 YAML schema rejects unknown fields. Use `config.example.yaml` as a starter configuration.
+Use `config.example.yaml` as a starter configuration.
 
 Supported CLI adapters are `claude`, `codex`, `droid`, `gemini`, `llamacpp`, and `omp`. Supported HTTP adapters are `ollama`, `lmstudio`, `openrouter`, `nebius`, and `openai`.
 
@@ -295,10 +287,6 @@ pnpm generate:schemas
 ```
 
 Generated MCP input and output schemas are in `docs/generated/tool-schemas.json`.
-
-## Release boundary
-
-The TypeScript release does not read Python configuration or Python-era SQLite databases. Use a new version 2 configuration and a new data directory.
 
 ## License
 
