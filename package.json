@@ -11,8 +11,17 @@
   "bugs": {
     "url": "https://github.com/EngineeredDev/rostra/issues"
   },
-  "keywords": ["mcp", "model-context-protocol", "deliberation", "decision-making"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "deliberation",
+    "decision-making"
+  ],
   "mcpName": "io.github.engineereddev/rostra",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -66,7 +75,10 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3"
+      "better-sqlite3",
+      "onnxruntime-node",
+      "protobufjs",
+      "sharp"
     ]
   }
 }
