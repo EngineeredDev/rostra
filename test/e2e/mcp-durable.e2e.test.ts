@@ -109,6 +109,19 @@ const participants = [
   { participant_id: "reviewer_b", cli: "fake", model: "fake-b" },
 ];
 
+async function waitForStatus(client: Client, jobId: string, status: string): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const job = objectSchema.parse((await client.callTool({
+      name: "get_deliberation",
+      arguments: { job_id: jobId },
+    })).structuredContent);
+    if (job.status === status) return;
+    await new Promise<void>((resolvePromise) => setTimeout(resolvePromise, 20));
+  }
+  throw new Error(`Job ${jobId} did not reach ${status}`);
+}
+
 describe("compiled durable MCP", () => {
   it("survives disconnects, deduplicates, waits, and cancels", async () => {
     const setup = await fixture();
@@ -169,10 +182,12 @@ describe("compiled durable MCP", () => {
       },
     })).structuredContent);
     const cancelJobId = z.uuid().parse(cancellable.job_id);
-    await secondClient.callTool({
+    await waitForStatus(secondClient, cancelJobId, "running");
+    const cancellation = objectSchema.parse((await secondClient.callTool({
       name: "cancel_deliberation",
       arguments: { job_id: cancelJobId, reason: "e2e" },
-    });
+    })).structuredContent);
+    expect(cancellation).toMatchObject({ job_id: cancelJobId, status: "cancelling" });
     const cancelled = objectSchema.parse((await secondClient.callTool({
       name: "get_deliberation",
       arguments: {
