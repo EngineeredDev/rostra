@@ -6,6 +6,15 @@ import process from "node:process";
 
 const packageValue = JSON.parse(await readFile("package.json", "utf8"));
 const serverValue = JSON.parse(await readFile("server.json", "utf8"));
+const readmeValue = await readFile("README.md", "utf8");
+const readmeVersions = [
+  ...readmeValue.matchAll(
+    /@engineereddev\/rostra@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g,
+  ),
+].map((match) => match[1]);
+if (readmeVersions.length === 0 || readmeVersions.some((version) => version !== packageValue.version)) {
+  throw new Error("README.md package versions do not match package.json");
+}
 const npmPackage = serverValue.packages.find((value) => value.registryType === "npm");
 if (
   packageValue.mcpName !== serverValue.name ||

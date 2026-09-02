@@ -54,9 +54,16 @@ CLI adapters also require their matching executable. HTTP adapters require acces
 
 Git and pnpm 10.11.0 are only required for a source install.
 
-## Install from source
+## Install
 
-The public npm release is pending. Use the source install until the package is available:
+Install the exact beta version, then create the user configuration and data directory:
+
+```bash
+npm install --global @engineereddev/rostra@0.1.0-beta.2
+rostra init
+```
+
+### Install from source
 
 ```bash
 git clone https://github.com/EngineeredDev/rostra.git
@@ -98,27 +105,14 @@ The default `local_minilm` similarity provider uses a pinned MiniLM model. The `
 
 ## Configure an MCP client
 
-Use the absolute source path until the npm package is public:
-
-```json
-{
-  "mcpServers": {
-    "rostra": {
-      "command": "node",
-      "args": ["/absolute/path/to/rostra/dist/cli/main.js"]
-    }
-  }
-}
-```
-
-After npm publication, clients can use the exact package version:
+Pin the package version so a client restart cannot install a different release:
 
 ```json
 {
   "mcpServers": {
     "rostra": {
       "command": "npx",
-      "args": ["--yes", "@engineereddev/rostra@0.1.0-beta.1"]
+      "args": ["--yes", "@engineereddev/rostra@0.1.0-beta.2"]
     }
   }
 }

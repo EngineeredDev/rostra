@@ -1,0 +1,62 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm generate:schemas
+      - run: git diff --exit-code
+      - run: pnpm test:package
+      - name: Resolve release metadata
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from "node:fs";
+
+          const packageValue = JSON.parse(readFileSync("package.json", "utf8"));
+          const serverValue = JSON.parse(readFileSync("server.json", "utf8"));
+          const npmPackage = serverValue.packages.find((value) => value.registryType === "npm");
+          const version = packageValue.version;
+
+          if (serverValue.version !== version || npmPackage?.version !== version) {
+            throw new Error("package.json and server.json versions do not match");
+          }
+          if (npmPackage.identifier !== packageValue.name) {
+            throw new Error("package.json and server.json package names do not match");
+          }
+          if (process.env.RELEASE_TAG !== `v${version}`) {
+            throw new Error(`Tag ${process.env.RELEASE_TAG} does not match package version v${version}`);
+          }
+
+          const match = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-beta\.(0|[1-9]\d*))?$/.exec(version);
+          if (!match) {
+            throw new Error(`Unsupported release version: ${version}`);
+          }
+
+          const distTag = match[1] === undefined ? "latest" : "beta";
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ndist-tag=${distTag}\n`);
+          NODE
+      - run: npm publish --access public --tag "${{ steps.release.outputs.dist-tag }}" --provenance
