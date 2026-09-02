@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { Config } from "../config/schema.js";
 import { AppError } from "../errors.js";
 import {
@@ -117,10 +118,10 @@ export async function ensureSupervisor(options: EnsureSupervisorOptions): Promis
     `).run(ownerToken, options.buildId, options.configDigest, nowMs, nowMs);
   }).immediate();
 
-  const supervisorEntrypoint =
-    options.supervisorEntrypoint ?? new URL("./supervisor-main.js", import.meta.url).pathname;
-  const workerEntrypoint =
-    options.workerEntrypoint ?? new URL("./worker-main.js", import.meta.url).pathname;
+  const supervisorEntrypoint = options.supervisorEntrypoint
+    ?? fileURLToPath(new URL("./supervisor-main.js", import.meta.url));
+  const workerEntrypoint = options.workerEntrypoint
+    ?? fileURLToPath(new URL("./worker-main.js", import.meta.url));
   const child = spawn(
     process.execPath,
     [

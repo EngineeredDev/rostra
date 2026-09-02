@@ -49,6 +49,9 @@ similarity:
   base_url: http://127.0.0.1:9999
   model: test
   api_key_env: TEST_API_KEY
+  agreement_threshold: 0.82
+  retrieval_threshold: 0.72
+  thresholds_revision: smoke-v1
 execution: { allow_host_tools: false }
 jobs: {}
 storage: {}
