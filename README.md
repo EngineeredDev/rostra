@@ -1,6 +1,6 @@
 ![Rostra — a Roman orator addressing a civic audience from a stone podium carved with the name ROSTRA](assets/rostra-hero.png)
 
-> The famous Rostra in the Roman Forum, decorated with the bronze beaks  of captured enemy ships, where public speakers would stand
+> The famous Rostra in the Roman Forum, decorated with the bronze beaks of captured enemy ships, where public speakers would stand
 
 Rostra is an MCP server for durable, evidence-backed deliberation and decision making harnessing the power of multiple LLM models/harnesses.
 
@@ -276,6 +276,14 @@ is pinned to `127.0.0.1`. The endpoint is unauthenticated.
 The image includes Git. It does not include third-party model CLIs.
 
 ## Development
+
+Activate the Git hooks once after you clone the repository:
+
+```bash
+pnpm hooks:install
+```
+
+Run the project checks:
 
 ```bash
 pnpm build

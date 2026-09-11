@@ -62,6 +62,7 @@ describe("adapter registry", () => {
         environment: {
           PATH: "/bin",
           HOME: "/home/test",
+          USER: "test-user",
           ALLOWED_SECRET: "allowed",
           BLOCKED_SECRET: "blocked",
           CLAUDECODE: "nested",
@@ -93,6 +94,7 @@ describe("adapter registry", () => {
     expect(runner.input?.env).toEqual({
       PATH: "/bin",
       HOME: "/home/test",
+      USER: "test-user",
       ALLOWED_SECRET: "allowed",
     });
     expect(runner.input?.args).toEqual(["exec", "--model", "sol", "answer"]);

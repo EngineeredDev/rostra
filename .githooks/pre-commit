@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+root=$(git rev-parse --show-toplevel)
+snapshot=$(mktemp -d "${TMPDIR:-/tmp}/rostra-pre-commit.XXXXXX")
+trap 'rm -rf "$snapshot"' EXIT HUP INT TERM
+
+git checkout-index --all --prefix="$snapshot/"
+ln -s "$root/node_modules" "$snapshot/node_modules"
+
+cd "$snapshot"
+pnpm lint
+pnpm format:check

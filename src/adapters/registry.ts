@@ -28,6 +28,7 @@ const commonCliEnvironment = [
   "HOME",
   "TMPDIR",
   "TEMP",
+  "USER",
   "USERPROFILE",
   "SystemRoot",
 ] as const;

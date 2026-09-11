@@ -115,6 +115,7 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
     },
     async (input) => {
       try {
+        await runtime.ensureSupervisor();
         const submission = runtime.store.submit(
           {
             ...input,
@@ -127,7 +128,6 @@ export function createMcpServer(runtime: McpRuntime): McpServer {
             forceNew: input.force_new,
           },
         );
-        await runtime.ensureSupervisor();
         return response({
           job_id: submission.job_id,
           status: submission.status,

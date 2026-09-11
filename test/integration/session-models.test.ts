@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { configSchema } from "../../src/config/schema.js";
 import { DecisionCiReviewer } from "../../src/decision-ci/review.js";
 import { DecisionRepository } from "../../src/decisions/repository.js";
+import { AppError } from "../../src/errors.js";
 import { JobStore } from "../../src/jobs/store.js";
 import { createMcpServer, type McpRuntime } from "../../src/mcp/server.js";
 import { openStorage } from "../../src/storage/database.js";
@@ -99,5 +100,39 @@ describe("session model overrides", () => {
     });
 
     expect(result.structuredContent).toMatchObject({ error_type: "model_not_allowed" });
+  });
+});
+
+describe("deliberation submission", () => {
+  it("does not persist a job when the executor is unavailable", async () => {
+    const shared = await runtime();
+    shared.ensureSupervisor = () =>
+      Promise.reject(
+        new AppError(
+          "executor_version_mismatch",
+          "The previous executor must drain active work before new dispatch",
+        ),
+      );
+    const client = await connect(shared);
+
+    const result = await client.callTool({
+      name: "start_deliberation",
+      arguments: {
+        question: "Should submission wait for an executor?",
+        working_directory: "/tmp/work",
+        protocol: "quick",
+        committee: { mode: "explicit" },
+        participants: [
+          { participant_id: "reviewer_a", cli: "codex", model: "sol" },
+          { participant_id: "reviewer_b", cli: "codex", model: "sol-mini" },
+        ],
+      },
+    });
+
+    expect(result.structuredContent).toMatchObject({
+      status: "failed",
+      error_type: "executor_version_mismatch",
+    });
+    expect(shared.store.list().jobs).toEqual([]);
   });
 });
