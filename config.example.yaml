@@ -61,6 +61,13 @@ adapters:
     enabled: false
     base_url: http://127.0.0.1:1234
     family: local
+  fireworks:
+    kind: http
+    enabled: false
+    base_url: https://api.fireworks.ai/inference/v1/
+    endpoint: chat/completions
+    api_key_env: FIREWORKS_API_KEY
+    family: fireworks
   openrouter:
     kind: http
     enabled: false
@@ -103,6 +110,12 @@ model_registry:
       reasoning_efforts: [low, medium, high]
       capabilities: [analysis, code, evidence]
       provider_family: openai
+      default_latency_ms: 30000
+    - id: accounts/fireworks/models/kimi-k3
+      adapter: fireworks
+      reasoning_efforts: [low, medium, high]
+      capabilities: [analysis]
+      provider_family: moonshot
       default_latency_ms: 30000
 
 defaults:

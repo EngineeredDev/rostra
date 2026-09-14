@@ -109,6 +109,16 @@ const descriptorList: readonly AdapterDescriptor[] = [
     httpStyle: "openai",
   },
   {
+    name: "fireworks",
+    transport: "http",
+    providerFamily: "fireworks",
+    supportedReasoningEfforts: ["low", "medium", "high"],
+    capabilities: ["analysis"],
+    environmentAllowlist: [],
+    configSchema: httpAdapterConfigSchema,
+    httpStyle: "openai",
+  },
+  {
     name: "openrouter",
     transport: "http",
     providerFamily: "openrouter",
@@ -335,7 +345,13 @@ export class AdapterRegistry {
     const body =
       descriptor.httpStyle === "ollama"
         ? { model: input.model, prompt: input.prompt, stream: false }
-        : { model: input.model, messages: [{ role: "user", content: input.prompt }] };
+        : {
+            model: input.model,
+            messages: [{ role: "user", content: input.prompt }],
+            ...(descriptor.name === "fireworks" && input.reasoningEffort !== undefined
+              ? { reasoning_effort: input.reasoningEffort }
+              : {}),
+          };
     let lastError: unknown;
     for (let attempt = 0; attempt <= configuration.max_retries; attempt += 1) {
       const timeoutSignal = AbortSignal.timeout(configuration.timeout_seconds * 1_000);

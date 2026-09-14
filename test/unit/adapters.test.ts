@@ -44,6 +44,7 @@ describe("adapter registry", () => {
       "omp",
       "ollama",
       "lmstudio",
+      "fireworks",
       "openrouter",
       "nebius",
       "openai",
@@ -100,7 +101,7 @@ describe("adapter registry", () => {
     expect(runner.input?.args).toEqual(["exec", "--model", "sol", "answer"]);
   });
 
-  it("maps OpenAI-compatible requests and retries only retryable failures", async () => {
+  it("maps direct Fireworks requests and retries retryable failures", async () => {
     const requests: RequestInit[] = [];
     const resources: string[] = [];
     let calls = 0;
@@ -134,38 +135,44 @@ describe("adapter registry", () => {
     };
     const registry = new AdapterRegistry(
       {
-        openai: {
+        fireworks: {
           kind: "http",
           enabled: true,
-          base_url: "https://example.test",
-          endpoint: "/v1/chat/completions",
-          api_key_env: "OPENAI_API_KEY",
+          base_url: "https://api.fireworks.ai/inference/v1/",
+          endpoint: "chat/completions",
+          api_key_env: "FIREWORKS_API_KEY",
           timeout_seconds: 30,
           max_retries: 1,
-          family: "openai",
+          family: "fireworks",
           headers: {},
         },
       },
       {
         fetch: fetchMock,
-        environment: { OPENAI_API_KEY: "secret" },
+        environment: { FIREWORKS_API_KEY: "secret" },
       },
     );
     await expect(
       registry.invoke({
-        adapter: "openai",
-        model: "model-a",
+        adapter: "fireworks",
+        model: "accounts/fireworks/models/kimi-k3",
         prompt: "answer",
+        reasoningEffort: "high",
         workingDirectory: "/tmp",
         allowHostTools: false,
       }),
     ).resolves.toMatchObject({ text: "remote answer", executionIsolation: "builtin_confined" });
     expect(calls).toBe(2);
     expect(resources).toEqual([
-      "https://example.test/v1/chat/completions",
-      "https://example.test/v1/chat/completions",
+      "https://api.fireworks.ai/inference/v1/chat/completions",
+      "https://api.fireworks.ai/inference/v1/chat/completions",
     ]);
     expect(requests[0]?.headers).toMatchObject({ Authorization: "Bearer secret" });
+    expect(JSON.parse(requests[0]?.body as string)).toEqual({
+      model: "accounts/fireworks/models/kimi-k3",
+      messages: [{ role: "user", content: "answer" }],
+      reasoning_effort: "high",
+    });
   });
 
   it("preserves the OpenRouter API prefix", async () => {

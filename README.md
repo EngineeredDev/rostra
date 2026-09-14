@@ -89,7 +89,7 @@ Rostra writes `rostra.sqlite`, transcripts, and model files to the data director
 
 Use `config.example.yaml` as a starter configuration.
 
-Supported CLI adapters are `claude`, `codex`, `droid`, `gemini`, `llamacpp`, and `omp`. Supported HTTP adapters are `ollama`, `lmstudio`, `openrouter`, `nebius`, and `openai`.
+Supported CLI adapters are `claude`, `codex`, `droid`, `gemini`, `llamacpp`, and `omp`. Supported HTTP adapters are `ollama`, `lmstudio`, `fireworks`, `openrouter`, `nebius`, and `openai`.
 
 The model registry controls the model IDs, reasoning efforts, capabilities, provider families, costs, and latency estimates available for routing.
 

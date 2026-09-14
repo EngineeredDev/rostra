@@ -3,6 +3,11 @@ import { stageKindSchema, type StageKind } from "../config/schema.js";
 import { AppError, errorMessage } from "../errors.js";
 import { nonemptyStringSchema, slugSchema, uuidSchema } from "./common.js";
 
+export const stageUuidPlaceholder = "11111111-1111-4111-8111-111111111111";
+const stageResultUuidSchema = uuidSchema.refine((value) => value !== stageUuidPlaceholder, {
+  message: "Create a new UUID. Do not copy the prompt UUID.",
+});
+
 export const predictionSchema = z.strictObject({
   statement: nonemptyStringSchema,
   probability: z.number().min(0).max(1),
@@ -11,7 +16,7 @@ export const predictionSchema = z.strictObject({
 });
 
 export const claimDraftSchema = z.strictObject({
-  claim_id: uuidSchema,
+  claim_id: stageResultUuidSchema,
   type: z.enum(["fact", "assumption", "prediction", "risk", "recommendation"]),
   text: nonemptyStringSchema,
   confidence: z.number().min(0).max(1),
@@ -26,7 +31,7 @@ export const analysisSubmissionSchema = z.strictObject({
 });
 
 export const critiqueSubmissionSchema = z.strictObject({
-  target_claim_ids: z.array(uuidSchema).min(1),
+  target_claim_ids: z.array(stageResultUuidSchema).min(1),
   objection: nonemptyStringSchema,
   evidence_request: nonemptyStringSchema.optional(),
 });
@@ -44,17 +49,17 @@ export const ballotSubmissionSchema = z
   });
 
 export const evidenceSubmissionSchema = z.strictObject({
-  claim_id: uuidSchema,
+  claim_id: stageResultUuidSchema,
   evidence_requests: z.array(nonemptyStringSchema),
-  evidence_ids: z.array(uuidSchema),
+  evidence_ids: z.array(stageResultUuidSchema),
   assessment: nonemptyStringSchema,
 });
 
 export const adjudicationSubmissionSchema = z.strictObject({
-  claim_id: uuidSchema,
+  claim_id: stageResultUuidSchema,
   verdict: z.enum(["supported", "refuted", "unknown"]),
   rationale: nonemptyStringSchema,
-  evidence_ids: z.array(uuidSchema),
+  evidence_ids: z.array(stageResultUuidSchema),
 });
 
 export const experimentProposalSchema = z.strictObject({
@@ -71,7 +76,7 @@ export const experimentProposalSchema = z.strictObject({
 export const anonymousAggregateSchema = z.strictObject({
   agreements: z.array(nonemptyStringSchema),
   disagreements: z.array(nonemptyStringSchema),
-  unresolved_claim_ids: z.array(uuidSchema),
+  unresolved_claim_ids: z.array(stageResultUuidSchema),
 });
 
 export const stageSubmissionSchemas = {

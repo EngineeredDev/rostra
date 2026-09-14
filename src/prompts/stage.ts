@@ -1,5 +1,6 @@
 import type { StageKind } from "../config/schema.js";
 import type { DecisionOption } from "../contracts/common.js";
+import { stageUuidPlaceholder } from "../contracts/submissions.js";
 
 interface PriorResponse {
   participantId: string;
@@ -16,7 +17,7 @@ interface StagePromptInput {
   allowedCapabilities?: readonly string[];
 }
 
-const claimId = "11111111-1111-4111-8111-111111111111";
+const claimId = stageUuidPlaceholder;
 const claimExample = `{"claim_id":"${claimId}","type":"fact","text":"...","confidence":0.0}`;
 const predictionExample =
   '{"statement":"...","probability":0.0,"target_date":"2030-01-01T00:00:00Z","resolution_criteria":"..."}';

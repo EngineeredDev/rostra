@@ -3,7 +3,7 @@ import {
   queryDecisionsInputSchema,
   startDeliberationInputSchema,
 } from "../../src/contracts/tools.js";
-import { extractStageSubmission } from "../../src/contracts/submissions.js";
+import { extractStageSubmission, stageUuidPlaceholder } from "../../src/contracts/submissions.js";
 
 const participant = {
   participant_id: "reviewer_a",
@@ -53,5 +53,76 @@ describe("shared wire contracts", () => {
     const result = extractStageSubmission("final_ballot", raw);
     expect(result.submission).toMatchObject({ option_id: "option-a", confidence: 0.8 });
     expect(result.raw_text).toBe(raw);
+  });
+
+  it("rejects the prompt UUID from every stage UUID field", () => {
+    const validId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const invalidSubmissions = [
+      [
+        "independent_analysis",
+        {
+          claims: [
+            {
+              claim_id: stageUuidPlaceholder,
+              type: "fact",
+              text: "Copied example",
+              confidence: 0.8,
+            },
+          ],
+          assumptions: [],
+          recommendation: "Generate a new claim identifier",
+          confidence: 0.8,
+          predictions: [],
+        },
+      ],
+      ["critique", { target_claim_ids: [stageUuidPlaceholder], objection: "Copied example" }],
+      [
+        "anonymous_aggregate",
+        { agreements: [], disagreements: [], unresolved_claim_ids: [stageUuidPlaceholder] },
+      ],
+      [
+        "evidence_collection",
+        {
+          claim_id: stageUuidPlaceholder,
+          evidence_requests: [],
+          evidence_ids: [],
+          assessment: "Copied example",
+        },
+      ],
+      [
+        "evidence_collection",
+        {
+          claim_id: validId,
+          evidence_requests: [],
+          evidence_ids: [stageUuidPlaceholder],
+          assessment: "Copied example",
+        },
+      ],
+      [
+        "adjudication",
+        {
+          claim_id: stageUuidPlaceholder,
+          verdict: "unknown",
+          rationale: "Copied example",
+          evidence_ids: [],
+        },
+      ],
+      [
+        "adjudication",
+        {
+          claim_id: validId,
+          verdict: "unknown",
+          rationale: "Copied example",
+          evidence_ids: [stageUuidPlaceholder],
+        },
+      ],
+    ] as const;
+
+    for (const [kind, submission] of invalidSubmissions) {
+      const raw = "ROSTRA_RESULT: " + JSON.stringify(submission);
+      expect(() => extractStageSubmission(kind, raw)).toThrowError(
+        expect.objectContaining({ code: "invalid_stage_result" }),
+      );
+    }
   });
 });

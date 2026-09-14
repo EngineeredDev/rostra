@@ -5,7 +5,7 @@ import {
   shouldStopProtocol,
 } from "../../src/deliberation/protocol/convergence.js";
 import { stageKindSchema } from "../../src/config/schema.js";
-import { extractStageSubmission } from "../../src/contracts/submissions.js";
+import { stageUuidPlaceholder, extractStageSubmission } from "../../src/contracts/submissions.js";
 import { classifyExecutionResult } from "../../src/deliberation/protocol/result-status.js";
 import { invokeStructuredStage } from "../../src/deliberation/protocol/invoke-stage.js";
 import {
@@ -286,7 +286,11 @@ describe("stage prompt output contract", () => {
       const marker = "ROSTRA_RESULT: ";
       const example = prompt.slice(prompt.lastIndexOf(marker) + marker.length).trim();
       expect(example).not.toContain("[]");
-      expect(() => extractStageSubmission(kind, prompt)).not.toThrow();
+      const completedPrompt = prompt.replaceAll(
+        stageUuidPlaceholder,
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      );
+      expect(() => extractStageSubmission(kind, completedPrompt)).not.toThrow();
     }
   });
 });
