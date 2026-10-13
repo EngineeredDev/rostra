@@ -52,7 +52,7 @@ Git and pnpm 10.11.0 are only required for a source install.
 Install the exact beta version, then create the user configuration and data directory:
 
 ```bash
-npm install --global @engineereddev/rostra@0.1.0-beta.2
+npm install --global @engineereddev/rostra@0.1.0-beta.1
 rostra init
 ```
 
@@ -104,7 +104,7 @@ Pin the package version so a client restart cannot install a different release:
   "mcpServers": {
     "rostra": {
       "command": "npx",
-      "args": ["--yes", "@engineereddev/rostra@0.1.0-beta.2"]
+      "args": ["--yes", "@engineereddev/rostra@0.1.0-beta.1"]
     }
   }
 }
